@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -325,9 +325,9 @@ namespace NuGet.PackageManagement
                 .Select(dependency => dependency.Id));
 
             // expand all parents of expanded packages
-            closureIds.UnionWith(combinedResults.Where(
+            /*closureIds.UnionWith(combinedResults.Where(
                 package => package.Dependencies.Any(dependency => idsSearched.Contains(dependency.Id)))
-                .Select(package => package.Id));
+                .Select(package => package.Id));*/
 
             // all unique ids gathered so far
             var currentResultIds = new HashSet<string>(combinedResults.Select(package => package.Id),
