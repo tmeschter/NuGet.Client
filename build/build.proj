@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Test" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'README.md'))\build\common.props" />
 
@@ -12,7 +12,6 @@
     </CommonMSBuildProperties>
   </PropertyGroup>
 
-    <ApexTestProjects Include="$(RepositoryRootDirectory)test\NuGet.Tests.Apex\*\*.csproj" />
   <!--
     ============================================================
     Run core functional tests (non-VS specific)
@@ -97,6 +96,10 @@
     ============================================================
   -->
   <Target Name="ApexTestsVS15">
+    <ItemGroup>
+      <ApexTestProjects Include="$(RepositoryRootDirectory)test\NuGet.Tests.Apex\*\*.csproj" />
+    </ItemGroup>
+    
     <!-- Test inputs -->
     <PropertyGroup>
       <TestProjectPaths>@(ApexTestProjects)</TestProjectPaths>
