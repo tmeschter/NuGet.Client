@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -30,7 +30,9 @@ namespace NuGet.Tests.Apex
 
             _hostFixture = new Lazy<VisualStudioHostFixture>(() =>
             {
-                return _contextFixtureFactory.GetVisualStudioHostFixture();
+                var host = _contextFixtureFactory.GetVisualStudioHostFixture();
+
+                return host;
             });
         }
 

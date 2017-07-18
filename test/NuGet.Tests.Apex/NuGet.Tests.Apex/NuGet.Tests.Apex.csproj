@@ -33,6 +33,7 @@
     <Compile Include="Fixtures\VisualStudioHostFixtureFactory.cs" />
     <Compile Include="Fixtures\VisualStudioOperationsFixture.cs" />
     <Compile Include="NuGetIVsApiTests\IVsPackageInstallerTestCase.cs" />
+    <Compile Include="PowershellTests\PowershellConsoleTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Test.Apex-d15rel">
@@ -46,11 +47,13 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\NuGet.Clients\NuGet.VisualStudio.Common\NuGet.VisualStudio.Common.csproj" />
     <ProjectReference Include="..\..\..\src\NuGet.Clients\NuGet.VisualStudio\NuGet.VisualStudio.csproj">
       <Project>{e5556bc6-a7fd-4d8e-8a7d-7648df1d7471}</Project>
       <Name>NuGet.VisualStudio</Name>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </ProjectReference>
+    <ProjectReference Include="..\..\TestUtilities\Test.Utility\Test.Utility.csproj" />
   </ItemGroup>
   <Import Project="$(BuildCommonDirectory)common.targets" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

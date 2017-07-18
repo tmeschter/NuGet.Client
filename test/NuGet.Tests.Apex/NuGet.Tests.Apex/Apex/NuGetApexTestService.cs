@@ -8,6 +8,7 @@ using EnvDTE;
 using Microsoft.Test.Apex;
 using Microsoft.Test.Apex.VisualStudio;
 using Microsoft.Test.Apex.VisualStudio.Solution;
+using NuGet.PackageManagement.VisualStudio;
 using NuGet.VisualStudio;
 
 namespace NuGet.Tests.Apex
@@ -15,6 +16,11 @@ namespace NuGet.Tests.Apex
     [Export(typeof(NuGetApexTestService))]
     public class NuGetApexTestService : VisualStudioTestService<NuGetApexVerifier>
     {
+        /// <summary>
+        /// IScriptExecutor for executing powershell commands.
+        /// </summary>
+        protected internal IScriptExecutor ScriptExecutor => VisualStudioObjectProviders.GetComponentModelService<IScriptExecutor>();
+
         /// <summary>
         /// Gets the NuGet IVsPackageInstallerServices
         /// </summary>
@@ -133,6 +139,30 @@ namespace NuGet.Tests.Apex
             {
                 Logger.WriteException(EntryType.Warning, e, string.Format("An error occured while attempting to uninstall package {0}", packageName));
             }
+        }
+
+        /// <summary>
+        /// Open NuGet Powershell Management Console
+        /// </summary>
+        public void OpenPowershellConsole()
+        {
+            NuGetUIThreadHelper.JoinableTaskFactory.Run(async () =>
+            {
+                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                Dte.ExecuteCommand("View.PackageManagerConsole");
+            });
+        }
+
+        public void ExecutePowershellCommand(params string[] lines)
+        {
+            NuGetUIThreadHelper.JoinableTaskFactory.Run(async () =>
+            {
+                foreach (var line in lines)
+                {
+                    await ScriptExecutor.ExecuteCommand(line);
+                }
+            });
         }
     }
 }

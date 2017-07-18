@@ -21,7 +21,7 @@ using Task = System.Threading.Tasks.Task;
 namespace NuGetConsole
 {
     [Export(typeof(IScriptExecutor))]
-    internal class ScriptExecutor : IScriptExecutor
+    public class ScriptExecutor : IScriptExecutor
     {
         private ConcurrentDictionary<PackageIdentity, PackageInitPS1State> InitScriptExecutions
             = new ConcurrentDictionary<PackageIdentity, PackageInitPS1State>(PackageIdentityComparer.Default);
@@ -167,6 +167,14 @@ namespace NuGetConsole
             }
 
             return result;
+        }
+
+        public async Task ExecuteCommand(string command)
+        {
+            var console = OutputConsoleProvider.CreatePowerShellConsole();
+            var host = await Host.GetValueAsync();
+
+            await Task.Run(() => host.Execute(console, command, new object[0]));
         }
         
         private async Task ExecuteScriptCoreAsync(ScriptExecutionRequest request)

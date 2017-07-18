@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -38,6 +38,7 @@ namespace NuGet.Tests.Apex
                 {
                     _visualStudioHostConfiguration = new VisualStudioHostConfiguration();
                     _visualStudioHostConfiguration.AddCompositionAssembly(Assembly.GetExecutingAssembly().Location);
+                    _visualStudioHostConfiguration.CommandLineArguments = "/rootSuffix exp";
                 }
                 return _visualStudioHostConfiguration;
             }

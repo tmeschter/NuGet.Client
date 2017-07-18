@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -9,6 +9,7 @@ using System.Linq;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.TextManager.Interop;
 
 namespace NuGetConsole.Implementation.PowerConsole
 {
@@ -32,6 +33,16 @@ namespace NuGetConsole.Implementation.PowerConsole
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         [ImportMany]
         internal IEnumerable<Lazy<IHostProvider, IHostMetadata>> HostProviders { get; set; }
+
+
+        public void RunTestCommand(string line)
+        {
+            var hostInfo = HostInfos.First().Value;
+
+            hostInfo.WpfConsole.Host.Execute(hostInfo.WpfConsole, line, new object[0]);
+
+            var view = (IVsTextView)hostInfo.WpfConsole.VsTextView;
+        }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "_hostInfo collection is disposed.")]
