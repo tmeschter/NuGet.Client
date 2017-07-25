@@ -222,6 +222,15 @@ namespace NuGet.PackageManagement {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to .NET MSBuild Extensions must be installed to use .NET Standard 2.0 packages from .NET Framework projects..
+        /// </summary>
+        public static string MissingNetStandard20MSI {
+            get {
+                return ResourceManager.GetString("MissingNetStandard20MSI", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to When updating multiple packages, dependency behavior has to be DependencyBehavior.Highest.
         /// </summary>
         public static string MultiplePackageInstallOrUpdateHasToBeAnUpdate {

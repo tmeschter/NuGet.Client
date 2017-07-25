@@ -217,6 +217,19 @@ namespace NuGet.Common
             return Task.FromResult(0);
         }
 
+        public bool IsNetStandardMSINeeded()
+        {
+            var result = false;
+            var propertyValue = GetPropertyValue(ProjectManagement.Constants.ImplicitlyExpandNETStandardFacades);
+
+            if (string.IsNullOrEmpty(propertyValue))
+            {
+                result = true;
+            }
+
+            return result;
+        }
+
         public bool FileExistsInProject(string path)
         {
             // some ItemTypes which starts with _ are added by various MSBuild tasks for their own purposes

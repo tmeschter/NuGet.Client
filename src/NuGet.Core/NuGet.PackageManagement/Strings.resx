@@ -332,4 +332,7 @@
     <value>Source '{0}' not found. Please provide an HTTP or local source.</value>
     <comment>{0} is the source</comment>
   </data>
+  <data name="MissingNetStandard20MSI" xml:space="preserve">
+    <value>.NET MSBuild Extensions must be installed to use .NET Standard 2.0 packages from .NET Framework projects.</value>
+  </data>
 </root>

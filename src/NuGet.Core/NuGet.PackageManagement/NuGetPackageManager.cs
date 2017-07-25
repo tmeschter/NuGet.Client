@@ -1676,12 +1676,23 @@ namespace NuGet.PackageManagement
             }
             else
             {
+                var needsNetStandard20MSI = false;
+
                 // Set the original packages config if it exists
                 var msbuildProject = nuGetProject as MSBuildNuGetProject;
                 if (msbuildProject != null)
                 {
                     nuGetProjectContext.OriginalPackagesConfig =
                         msbuildProject.PackagesConfigNuGetProject?.GetPackagesConfig();
+
+                    needsNetStandard20MSI = msbuildProject.IsNetStandardMSINeeded();
+                }
+
+                var DoesProjectTargetNet461ORGreater = false;
+                NuGetFramework targetFramework;
+                if (nuGetProject.TryGetMetadata<NuGetFramework>(NuGetProjectMetadataKeys.TargetFramework, out targetFramework))
+                {
+                    DoesProjectTargetNet461ORGreater = NetStandardCompatibilityUtil.DoesProjectTargetsNEt461ORGreater(targetFramework);
                 }
 
                 ExceptionDispatchInfo exceptionInfo = null;
@@ -1760,6 +1771,21 @@ namespace NuGet.PackageManagement
                             {
                                 // use the version exactly as specified in the nuspec file
                                 var packageIdentity = downloadPackageResult.PackageReader.GetIdentity();
+
+                                // Check to see if the hack to install make net461/net462/net47 compatibile with netstandard20 or greater
+                                // is required.
+                                if (DoesProjectTargetNet461ORGreater)
+                                {
+                                    var needsNetstandard20OrGreaterAssets = NetStandardCompatibilityUtil.IsNearestFrameworkNetStandard20OrGreater(
+                                        targetFramework,
+                                        downloadPackageResult.PackageReader.GetSupportedFrameworks());
+
+                                    if (needsNetstandard20OrGreaterAssets && needsNetStandard20MSI)
+                                    {
+                                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture,
+                                            Strings.MissingNetStandard20MSI));
+                                    }
+                                }
 
                                 await ExecuteInstallAsync(
                                     nuGetProject,

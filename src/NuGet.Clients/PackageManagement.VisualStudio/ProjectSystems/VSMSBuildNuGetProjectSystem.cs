@@ -929,5 +929,25 @@ namespace NuGet.PackageManagement.VisualStudio
                        select p.Name;
             });
         }
+
+        public bool IsNetStandardMSINeeded()
+        {
+            var result = false;
+
+            // Get the msbuild project for this project
+            var buildProject = EnvDTEProjectUtility.AsMicrosoftBuildEvaluationProject(EnvDTEProject.FullName);
+
+            if (buildProject != null)
+            {
+                var propertyValue = MicrosoftBuildEvaluationProjectUtility.GetPropertyValue(buildProject, Constants.ImplicitlyExpandNETStandardFacades);
+
+                if (string.IsNullOrEmpty(propertyValue))
+                {
+                    result = true;
+                }
+            }
+
+            return result;
+        }
     }
 }
