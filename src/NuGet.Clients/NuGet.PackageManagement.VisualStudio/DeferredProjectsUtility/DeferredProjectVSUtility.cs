@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 #if !VS14
@@ -90,6 +91,8 @@ namespace NuGet.PackageManagement.VisualStudio
 #endif
         }
 
+#if !VS14
+
         private static object GetVSSolutionProperty(int propId)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -110,5 +113,6 @@ namespace NuGet.PackageManagement.VisualStudio
 
             return serviceProvider.GetService<SVsSolution, IVsSolution>();
         }
+#endif
     }
 }
