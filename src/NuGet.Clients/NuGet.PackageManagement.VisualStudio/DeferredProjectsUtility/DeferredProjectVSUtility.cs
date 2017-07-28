@@ -13,7 +13,9 @@ namespace NuGet.PackageManagement.VisualStudio
 {
     public static class DeferredProjectVSUtility
     {
+#if !VS14
         private static Lazy<IVsSolution> _vsSolution = new Lazy<IVsSolution>(() => GetVsSolution());
+#endif
 
         public static async Task<bool> SolutionHasDeferredProjectsAsync()
         {
