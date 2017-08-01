@@ -523,6 +523,7 @@ namespace NuGet.CommandLine
             IEnumerable<MsBuildToolset> installedToolsets,
             Func<string> getMsBuildPathInPathVar)
         {
+            installedToolsets.ToList().ForEach(p => LogToolsetToConsole(console, p));
             MsBuildToolset toolset;
             if (string.IsNullOrEmpty(userVersion))
             {
