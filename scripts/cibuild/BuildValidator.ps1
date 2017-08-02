@@ -31,7 +31,7 @@ if ($BuildRTM -eq 'false')
 
     $result = 0
     $NuGetClientRoot = $env:BUILD_REPOSITORY_LOCALPATH
-    $NuGetValidator = [System.IO.Path]::Combine($NuGetClientRoot, 'temp', 'NuGetValidator.1.4.0.3', 'tools', 'NuGetValidator.exe')
+    $NuGetValidator = [System.IO.Path]::Combine($NuGetClientRoot, 'temp', 'NuGetValidator.1.4.0.3', 'NuGetValidator.exe')
     $msbuildExe = 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\MSBuild\15.0\bin\msbuild.exe'
     
     if ($ValidateSigning)

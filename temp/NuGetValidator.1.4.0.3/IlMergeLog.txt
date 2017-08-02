@@ -1,0 +1,41 @@
+INFO: IL Repack - Version 2.0.13
+INFO: ------------- IL Repack Arguments -------------
+/out:E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\NuGetValidator.exe  E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\NuGetValidator.exe E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\Microsoft.Extensions.CommandLineUtils.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\Newtonsoft.Json.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Common.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Configuration.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Frameworks.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Packaging.Core.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Packaging.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Protocol.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Versioning.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGetValidators.Artifact.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGetValidators.Localization.dll E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGetValidators.Utility.dll
+-----------------------------------------------
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\NuGetValidator.exe
+INFO: Failed to load debug information for E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\NuGetValidator.exe
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\Microsoft.Extensions.CommandLineUtils.dll
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\Newtonsoft.Json.dll
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Common.dll
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Configuration.dll
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Frameworks.dll
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Packaging.Core.dll
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Packaging.dll
+INFO: Adding assembly for merge: E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Protocol.dll
+ERROR: Failed to load assembly E:\NuGetBuildValidators\NuGetValidator\bin\release\net461\\NuGet.Protocol.dll
+Mono.Cecil.AssemblyResolutionException: Failed to resolve assembly: 'Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed'
+   at Mono.Cecil.BaseAssemblyResolver.Resolve(AssemblyNameReference name, ReaderParameters parameters)
+   at Mono.Cecil.DefaultAssemblyResolver.Resolve(AssemblyNameReference name)
+   at Mono.Cecil.MetadataResolver.Resolve(TypeReference type)
+   at Mono.Cecil.TypeReference.Resolve()
+   at Mono.Cecil.Mixin.CheckedResolve(TypeReference self)
+   at Mono.Cecil.SignatureReader.ReadCustomAttributeEnum(TypeReference enum_type)
+   at Mono.Cecil.SignatureReader.ReadCustomAttributeElement(TypeReference type)
+   at Mono.Cecil.SignatureReader.ReadCustomAttributeNamedArgument(Collection`1& fields, Collection`1& properties)
+   at Mono.Cecil.SignatureReader.ReadCustomAttributeNamedArguments(UInt16 count, Collection`1& fields, Collection`1& properties)
+   at Mono.Cecil.CustomAttribute.<Resolve>b__34_0(CustomAttribute attribute, MetadataReader reader)
+   at Mono.Cecil.ModuleDefinition.Read[TItem,TRet](TItem item, Func`3 read)
+   at Mono.Cecil.CustomAttribute.get_ConstructorArguments()
+   at Mono.Cecil.ImmediateModuleReader.ReadCustomAttributes(ICustomAttributeProvider provider)
+   at Mono.Cecil.ImmediateModuleReader.ReadProperties(TypeDefinition type)
+   at Mono.Cecil.ImmediateModuleReader.ReadType(TypeDefinition type)
+   at Mono.Cecil.ImmediateModuleReader.ReadTypes(Collection`1 types)
+   at Mono.Cecil.ImmediateModuleReader.ReadModule(ModuleDefinition module)
+   at Mono.Cecil.ImmediateModuleReader.<ReadModule>b__1_0(ModuleDefinition module, MetadataReader reader)
+   at Mono.Cecil.ModuleDefinition.Read[TItem,TRet](TItem item, Func`3 read)
+   at Mono.Cecil.ModuleReader.CreateModuleFrom(Image image, ReaderParameters parameters)
+   at Mono.Cecil.ModuleDefinition.ReadModule(String fileName, ReaderParameters parameters)
+   at ILRepacking.ILRepack.ReadInputAssembly(String assembly, Boolean isPrimary)
+   at ILRepacking.ILRepack.ReadInputAssemblies()
+   at ILRepacking.ILRepack.Repack()
+   at ILRepacking.Application.Main(String[] args)
