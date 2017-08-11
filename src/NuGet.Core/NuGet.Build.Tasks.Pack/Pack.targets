@@ -131,6 +131,18 @@ Copyright (c) .NET Foundation. All rights reserved.
         ItemName="_OutputPackItems" />
     </GetPackOutputItemsTask>
 
+    <RemoveDuplicates 
+        Inputs="@(_CleanPriorFileWrites);@(_CleanCurrentFileWrites);@(_OutputPackItems)">
+ 	    <Output 
+        TaskParameter="Filtered"
+        ItemName="_CleanUniqueFileWritesFromNuGet"/>
+   	</RemoveDuplicates>
+
+    <WriteLinesToFile 
+        File="$(IntermediateOutputPath)$(CleanFile)"
+        Lines="_CleanUniqueFileWritesFromNuGet"
+        Overwrite="false"/>
+
     <ItemGroup>
       <!--This catches changes to properties-->
       <NuGetPackInput Include="$(MSBuildAllProjects)"/>
@@ -141,7 +153,6 @@ Copyright (c) .NET Foundation. All rights reserved.
       <NuGetPackInput Include="@(_SourceFiles)"/>
       <NuGetPackInput Include="@(_References)"/>
       <NuGetPackOutput Include="@(_OutputPackItems)"/>
-      <FileWrites Include="@(_OutputPackItems)" Condition="'$(GeneratePackageOnBuild)' == 'true'"/>
     </ItemGroup>
   </Target>
 
