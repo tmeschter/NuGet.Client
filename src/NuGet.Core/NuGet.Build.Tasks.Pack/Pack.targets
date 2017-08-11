@@ -24,7 +24,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     <PackageId Condition=" '$(PackageId)' == '' ">$(AssemblyName)</PackageId>
     <PackageVersion Condition=" '$(PackageVersion)' == '' ">$(Version)</PackageVersion>
     <IncludeContentInPack Condition="'$(IncludeContentInPack)'==''">true</IncludeContentInPack>
-    <GenerateNuspecDependsOn>_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; $(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
+    <GenerateNuspecDependsOn>_GetOutputItemsFromPack; _LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; $(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
     <Description Condition="'$(Description)'==''">Package Description</Description>
     <IsPackable Condition="'$(IsPackable)'=='' AND '$(IsTestProject)'=='true'">false</IsPackable>
     <IsPackable Condition="'$(IsPackable)'==''">true</IsPackable>
@@ -124,16 +124,6 @@ Copyright (c) .NET Foundation. All rights reserved.
           DependsOnTargets="Pack">
   </Target>
 
-  <Target Name="_CleanPackageFiles"
-          DependsOnTargets="_GetOutputItemsFromPack"
-          AfterTargets="Clean"
-          Condition="'$(GeneratePackageOnBuild)' == 'true'">
-    <ItemGroup>
-      <_PackageFilesToDelete Include="@(_OutputPackItems)"/>
-    </ItemGroup>
-    <Delete Files="@(_PackageFilesToDelete)"/>
-  </Target>
-
   <Target Name="_CalculateInputsOutputsForPack">
     <PropertyGroup Condition="$(ContinuePackingAfterGeneratingNuspec) == '' ">
       <ContinuePackingAfterGeneratingNuspec>false</ContinuePackingAfterGeneratingNuspec>
@@ -162,18 +152,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <NuGetPackInput Include="@(_TargetPathsToSymbols->'%(FinalOutputPath)')"/>
       <NuGetPackInput Include="@(_SourceFiles)"/>
       <NuGetPackInput Include="@(_References)"/>
-      <NuGetPackOutput Include="$(RestoreOutputAbsolutePath)$(PackageId).$(PackageVersion).nuspec"/>
-
-      <NuGetPackOutput Include="$(PackageOutputAbsolutePath)$(PackageId).$(PackageVersion).nupkg"
-                       Condition="'$(ContinuePackingAfterGeneratingNuspec)' == 'true'"/>
-
-      <NuGetPackOutput Include="$(PackageOutputAbsolutePath)$(PackageId).$(PackageVersion).symbols.nupkg"
-                       Condition="'$(IncludeSource)' == 'true'
-                               OR '$(IncludeSymbols)' == 'true'"/>
-
-      <NuGetPackOutput Include="$(RestoreOutputAbsolutePath)$(PackageId).$(PackageVersion).symbols.nuspec"
-                       Condition="'$(IncludeSource)' == 'true'
-                             OR '$(IncludeSymbols)' == 'true'"/>
+      <NuGetPackOutput Include="@(_OutputPackItems)"/>
+      <FileWrites Include="@(NuGetPackOutput)" Condition="'$(GeneratePackageOnBuild)' == 'true'"/>
     </ItemGroup>
   </Target>
 
