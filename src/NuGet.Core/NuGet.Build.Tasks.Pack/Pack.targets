@@ -24,7 +24,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     <PackageId Condition=" '$(PackageId)' == '' ">$(AssemblyName)</PackageId>
     <PackageVersion Condition=" '$(PackageVersion)' == '' ">$(Version)</PackageVersion>
     <IncludeContentInPack Condition="'$(IncludeContentInPack)'==''">true</IncludeContentInPack>
-    <GenerateNuspecDependsOn>_GetOutputItemsFromPack; _LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; $(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
+    <GenerateNuspecDependsOn>_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; $(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
     <Description Condition="'$(Description)'==''">Package Description</Description>
     <IsPackable Condition="'$(IsPackable)'=='' AND '$(IsTestProject)'=='true'">false</IsPackable>
     <IsPackable Condition="'$(IsPackable)'==''">true</IsPackable>
@@ -55,31 +55,6 @@ Copyright (c) .NET Foundation. All rights reserved.
       <BuildAction>None</BuildAction>
     </TfmSpecificPackageFile>
   </ItemDefinitionGroup>
-
-  <Target Name="_GetOutputItemsFromPack"
-          Returns="@(_OutputPackItems)">
-
-    <ConvertToAbsolutePath Paths="$(PackageOutputPath)">
-      <Output TaskParameter="AbsolutePaths" PropertyName="PackageOutputAbsolutePath" />
-    </ConvertToAbsolutePath>
-
-    <ConvertToAbsolutePath Paths="$(BaseIntermediateOutputPath)">
-      <Output TaskParameter="AbsolutePaths" PropertyName="NuspecOutputAbsolutePath" />
-    </ConvertToAbsolutePath>
-
-    <GetPackOutputItemsTask
-        PackageOutputPath="$(PackageOutputAbsolutePath)"
-        NuspecOutputPath="$(NuspecOutputAbsolutePath)"
-        PackageId="$(PackageId)"
-        PackageVersion="$(PackageVersion)"
-        IncludeSymbols="$(IncludeSymbols)"
-        IncludeSource="$(IncludeSource)">
-
-      <Output
-        TaskParameter="OutputPackItems"
-        ItemName="_OutputPackItems" />
-    </GetPackOutputItemsTask>
-  </Target>
 
   <!--
     ============================================================
@@ -143,6 +118,19 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="AbsolutePaths" PropertyName="NuspecFileAbsolutePath" />
     </ConvertToAbsolutePath>
 
+    <GetPackOutputItemsTask
+        PackageOutputPath="$(PackageOutputAbsolutePath)"
+        NuspecOutputPath="$(RestoreOutputAbsolutePath)"
+        PackageId="$(PackageId)"
+        PackageVersion="$(PackageVersion)"
+        IncludeSymbols="$(IncludeSymbols)"
+        IncludeSource="$(IncludeSource)">
+
+      <Output
+        TaskParameter="OutputPackItems"
+        ItemName="_OutputPackItems" />
+    </GetPackOutputItemsTask>
+
     <ItemGroup>
       <!--This catches changes to properties-->
       <NuGetPackInput Include="$(MSBuildAllProjects)"/>
@@ -153,7 +141,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <NuGetPackInput Include="@(_SourceFiles)"/>
       <NuGetPackInput Include="@(_References)"/>
       <NuGetPackOutput Include="@(_OutputPackItems)"/>
-      <FileWrites Include="@(NuGetPackOutput)" Condition="'$(GeneratePackageOnBuild)' == 'true'"/>
+      <FileWrites Include="@(_OutputPackItems)" Condition="'$(GeneratePackageOnBuild)' == 'true'"/>
     </ItemGroup>
   </Target>
 
