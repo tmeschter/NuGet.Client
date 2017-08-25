@@ -11,6 +11,20 @@ namespace NuGet.ProjectModel
 {
     public static class LockFileUtilities
     {
+        public static LockFile GetLockFile(string lockFilePath)
+        {
+            LockFile lockFile = null;
+
+            if (File.Exists(lockFilePath))
+            {
+                var lockFileFormat = new LockFileFormat();
+                var assetsFile = lockFileFormat.Read(lockFilePath);
+            }
+
+            return lockFile;
+
+        }
+
         public static LockFile GetLockFile(string lockFilePath, Common.ILogger logger)
         {
             LockFile lockFile = null;
@@ -24,6 +38,14 @@ namespace NuGet.ProjectModel
             }
 
             return lockFile;
+        }
+
+        public static bool HasCyclicDependency(string lockFilePath)
+        {   /*
+            Write logic to detect cyclic dependencies in a lock file
+            */
+
+            return true;
         }
     }
 }
