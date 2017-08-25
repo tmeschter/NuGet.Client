@@ -11,10 +11,10 @@ namespace NuGet.Test.Utility
         {
 
             int[] counts = { 5, 10, 20, 50, 100, 125, 150, 175, 200 };
-
+            var basePath = @"F:\validation\TransitiveNoWarn\p2pnowarnfast";
             foreach(var count in counts)
             {
-                var path = $@"F:\validation\TransitiveNoWarn\{count}";
+                var path = $@"{basePath}\{count}";
 
                 ClearPath(path);
                 GenerateSolution(count, path);
@@ -53,13 +53,15 @@ namespace NuGet.Test.Utility
                 var project = SimpleTestProjectContext.CreateNETCore(
                     "project_" + i,
                     pathContext.SolutionRoot,
-                    NuGetFramework.Parse("netcoreapp2.0"));
-
-                // B -> X
-                project.AddPackageToAllFrameworks(packageXWithNoWarn);
-                project.Save();
+                    NuGetFramework.Parse("net461"));
 
                 projects.Add(project);
+            }
+
+            for (var i = 1; i < projects.Count(); i++)
+            {
+                var project = projects[i];
+                project.AddPackageToAllFrameworks(packageXWithNoWarn);
             }
 
             for (var i = 0; i < projects.Count() - 1; i++)
@@ -70,7 +72,6 @@ namespace NuGet.Test.Utility
                     var projectB = projects[j];
                     projectA.AddProjectToAllFrameworks(projectB);
                 }
-
             }
 
             foreach (var project in projects)
