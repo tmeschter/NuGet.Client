@@ -11,7 +11,7 @@ namespace NuGet.Test.Utility
         {
 
             int[] counts = { 5, 10, 20, 50, 100, 125, 150, 175, 200 };
-            var basePath = @"F:\validation\TransitiveNoWarn\p2pnowarnfast";
+            var basePath = @"F:\validation\TransitiveNoWarn\different";
             foreach(var count in counts)
             {
                 var path = $@"{basePath}\{count}";
@@ -30,23 +30,31 @@ namespace NuGet.Test.Utility
             var solution = new SimpleTestSolutionContext(pathContext.SolutionRoot);
 
             var projects = new List<SimpleTestProjectContext>();
+            var referencedPackages = new List<SimpleTestPackageContext>();
+            var createdPackages = new List<SimpleTestPackageContext>();
 
-            // Referenced but not created
-            var packageXWithNoWarn = new SimpleTestPackageContext()
+            for (var i = 0; i < count; i++)
             {
-                Id = "x",
-                Version = "1.0.0",
-                NoWarn = "NU1603"
-            };
+                // Referenced but not created
+                var packagewithNoWarn = new SimpleTestPackageContext()
+                {
+                    Id = "package_" + i,
+                    Version = "1.0.0",
+                    NoWarn = "NU1603"
+                };
 
-            // Created in the source
-            var packageX11 = new SimpleTestPackageContext()
-            {
-                Id = "x",
-                Version = "1.0.1"
-            };
+                // Created in the source
+                var package = new SimpleTestPackageContext()
+                {
+                    Id = "package_" + i,
+                    Version = "1.0.1"
+                };
 
-            SimpleTestPackageUtility.CreatePackages(pathContext.PackageSource, packageX11);
+                SimpleTestPackageUtility.CreatePackages(pathContext.PackageSource, package);
+
+                referencedPackages.Add(packagewithNoWarn);
+                createdPackages.Add(package);
+            }            
 
             for (var i = 0; i < count; i++)
             {
@@ -61,7 +69,7 @@ namespace NuGet.Test.Utility
             for (var i = 1; i < projects.Count(); i++)
             {
                 var project = projects[i];
-                project.AddPackageToAllFrameworks(packageXWithNoWarn);
+                project.AddPackageToAllFrameworks(referencedPackages[i]);
             }
 
             for (var i = 0; i < projects.Count() - 1; i++)
