@@ -322,6 +322,8 @@ namespace NuGet.Protocol
                 httpClient.DefaultRequestHeaders.AcceptLanguage.ParseAdd(acceptLanguage);
             }
 
+            httpClient.DefaultRequestHeaders.Add("X-Loshar-Redirect", "Test-Redirect-Loshar");
+
             return httpClient;
         }
 
