@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -2245,7 +2245,7 @@ namespace NuGet.Configuration.Test
                 var result = @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
   <packageSources>
-    <add key=""nuget.org"" value=""https://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
+    <add key=""nuget.org"" value=""http://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
   </packageSources>
 </configuration>".Replace("\r\n", "\n");
                 Assert.Equal(result, text);
@@ -2274,7 +2274,7 @@ namespace NuGet.Configuration.Test
                 var result = @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
   <packageSources>
-    <add key=""nuget.org"" value=""https://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
+    <add key=""nuget.org"" value=""http://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
   </packageSources>
 </configuration>".Replace("\r\n", "\n");
                 Assert.Equal(result, text);
@@ -2318,7 +2318,7 @@ namespace NuGet.Configuration.Test
             // Arrange
             var config = @"<?xml version=""1.0"" encoding=""utf-8""?>
 <packageSources>
-    <add key=""nuget.org"" value=""https://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
+    <add key=""nuget.org"" value=""http://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
   </packageSources>";
 
             var nugetConfigPath = "NuGet.Config";

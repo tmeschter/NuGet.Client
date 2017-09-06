@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -99,7 +99,7 @@ namespace NuGet.Configuration.Test
                 var configContent = @"<?xml version='1.0' encoding='utf-8'?>
 <configuration>
   <apikeys>
-    <add key='https://www.nuget.org' value='removed' />
+    <add key='http://www.nuget.org' value='removed' />
     <add key='https://www.myget.org/F/somecompanyfeed-unstable/' value='removed' />
     <add key='https://www.myget.org/F/somecompanyfeed/' value='removed' />
     <add key='https://www.myget.org/F/somecompanyfeed-unstable/api/v2/package' value='removed' />
@@ -112,12 +112,12 @@ namespace NuGet.Configuration.Test
     <add key='automatic' value='True' />
   </packageRestore>
   <activePackageSource>
-    <add key='NuGet.org' value='https://nuget.org/api/v2/' />
+    <add key='NuGet.org' value='http://nuget.org/api/v2/' />
   </activePackageSource>
   <packageSources>
     <add key='CodeCrackerUnstable' value='https://www.myget.org/F/codecrackerbuild/api/v2' />
     <add key='CompanyFeedUnstable' value='https://www.myget.org/F/somecompanyfeed-unstable/api/v2/' />
-    <add key='NuGet.org' value='https://nuget.org/api/v2/' />
+    <add key='NuGet.org' value='http://nuget.org/api/v2/' />
     <add key='AspNetVNextStable' value='https://www.myget.org/F/aspnetmaster/api/v2' />
     <add key='AspNetVNextUnstable' value='https://www.myget.org/F/aspnetvnext/api/v2' />
     <add key='CompanyFeed' value='https://www.myget.org/F/somecompanyfeed/api/v2/' />
@@ -303,7 +303,7 @@ namespace NuGet.Configuration.Test
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""Packages"" />
     </packageSources>
 </configuration>
@@ -328,7 +328,7 @@ namespace NuGet.Configuration.Test
                        @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""Packages"" />
     </packageSources>
 </configuration>
@@ -347,7 +347,7 @@ namespace NuGet.Configuration.Test
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""Packages"" />
     </packageSources>
 </configuration>
@@ -373,7 +373,7 @@ namespace NuGet.Configuration.Test
                        @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""Packages"" />
         <add key=""test3"" value=""https://test3.net"" />
     </packageSources>
@@ -393,7 +393,7 @@ namespace NuGet.Configuration.Test
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""https://test.org"" />
          <clear />
         <add key=""test.org"" value=""https://new.test.org"" protocolVersion=""3"" />
@@ -422,7 +422,7 @@ namespace NuGet.Configuration.Test
                        @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""https://test.org"" />
          <clear />
         <add key=""test.org"" value=""https://new.test.org"" protocolVersion=""3"" />
@@ -445,7 +445,7 @@ namespace NuGet.Configuration.Test
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""https://test.org"" />
         <clear />
         <add key=""test.org"" value=""https://new.test.org"" protocolVersion=""3"" />
@@ -475,7 +475,7 @@ namespace NuGet.Configuration.Test
                        @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""https://test.org"" />
         <clear />
         <add key=""test.org"" value=""https://new.test.org"" protocolVersion=""3"" />
@@ -878,8 +878,8 @@ namespace NuGet.Configuration.Test
             settings.Setup(s => s.GetSettingValues("packageSources", true))
                 .Returns(new List<SettingValue>()
                     {
-                        new SettingValue("NuGet official package source", "https://nuget.org/api/v2", false),
-                        new SettingValue("nuget.org", "https://www.nuget.org/api/v2", false)
+                        new SettingValue("NuGet official package source", "http://nuget.org/api/v2", false),
+                        new SettingValue("nuget.org", "http://www.nuget.org/api/v2", false)
                     });
             settings.Setup(s => s.GetNestedValues("packageSourceCredentials", It.IsAny<string>())).Returns(new KeyValuePair<string, string>[0]);
             settings.Setup(s => s.GetSettingValues("disabledPackageSources", false)).Returns(new SettingValue[0]);
@@ -887,7 +887,7 @@ namespace NuGet.Configuration.Test
             var provider = CreatePackageSourceProvider(settings.Object,
                 migratePackageSources: new Dictionary<PackageSource, PackageSource>
                     {
-                        { new PackageSource("https://nuget.org/api/v2", "NuGet official package source"), new PackageSource("https://www.nuget.org/api/v2", "nuget.org") }
+                        { new PackageSource("http://nuget.org/api/v2", "NuGet official package source"), new PackageSource("https://www.nuget.org/api/v2", "nuget.org") }
                     });
 
             // Act
@@ -896,7 +896,7 @@ namespace NuGet.Configuration.Test
             // Assert
             Assert.Equal(1, values.Count);
             Assert.Equal("nuget.org", values[0].Name);
-            Assert.Equal("https://www.nuget.org/api/v2", values[0].Source);
+            Assert.Equal("http://www.nuget.org/api/v2", values[0].Source);
         }
 
         [Fact]
@@ -1071,8 +1071,8 @@ namespace NuGet.Configuration.Test
             settings.Setup(s => s.GetSettingValues("packageSources", true))
                 .Returns(new List<SettingValue>()
                     {
-                        new SettingValue("NuGet official package source", "https://nuget.org/api/v2", false),
-                        new SettingValue("nuget.org", "https://www.nuget.org/api/v2", false)
+                        new SettingValue("NuGet official package source", "http://nuget.org/api/v2", false),
+                        new SettingValue("nuget.org", "http://www.nuget.org/api/v2", false)
                     });
             settings.Setup(s => s.GetNestedValues("packageSourceCredentials", It.IsAny<string>())).Returns(new KeyValuePair<string, string>[0]);
             settings.Setup(s => s.GetSettingValues("disabledPackageSources", false)).Returns(new SettingValue[0]);
@@ -1082,7 +1082,7 @@ namespace NuGet.Configuration.Test
                     {
                         var value = Assert.Single(valuePairs);
                         Assert.Equal("nuget.org", value.Key);
-                        Assert.Equal("https://www.nuget.org/api/v2", value.Value);
+                        Assert.Equal("http://www.nuget.org/api/v2", value.Value);
                     })
                 .Verifiable();
 
@@ -1093,7 +1093,7 @@ namespace NuGet.Configuration.Test
             var provider = CreatePackageSourceProvider(settings.Object,
                 migratePackageSources: new Dictionary<PackageSource, PackageSource>
                     {
-                        { new PackageSource("https://nuget.org/api/v2", "NuGet official package source"), new PackageSource("https://www.nuget.org/api/v2", "nuget.org") }
+                        { new PackageSource("http://nuget.org/api/v2", "NuGet official package source"), new PackageSource("http://www.nuget.org/api/v2", "nuget.org") }
                     });
 
             // Act
@@ -1102,7 +1102,7 @@ namespace NuGet.Configuration.Test
             // Assert
             Assert.Equal(1, values.Count);
             Assert.Equal("nuget.org", values[0].Name);
-            Assert.Equal("https://www.nuget.org/api/v2", values[0].Source);
+            Assert.Equal("http://www.nuget.org/api/v2", values[0].Source);
             settings.Verify();
         }
 
@@ -1633,7 +1633,7 @@ namespace NuGet.Configuration.Test
             {
                 var configContent = @"<configuration>
     <packageSources>
-        <add key='nuget.org' value='https://www.nuget.org/api/v2/' />
+        <add key='nuget.org' value='http://www.nuget.org/api/v2/' />
     </packageSources>
 </configuration>";
                 ConfigurationFileTestUtility.CreateConfigurationFile("nuget.config", mockBaseDirectory, configContent);
@@ -1666,7 +1666,7 @@ namespace NuGet.Configuration.Test
                      @"<?xml version=""1.0""?>
 <configuration>
 <packageSources>
-    <add key='NuGet.org' value='https://NuGet.org' />
+    <add key='NuGet.org' value='http://NuGet.org' />
 </packageSources>
 </configuration>
 ";
@@ -1689,7 +1689,7 @@ namespace NuGet.Configuration.Test
                       @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
 <packageSources>
- <add key=""NuGet.org"" value=""https://NuGet.org"" />
+ <add key=""NuGet.org"" value=""http://NuGet.org"" />
  <add key=""test"" value=""https://test.org"" />
 </packageSources>
 </configuration>
@@ -1708,7 +1708,7 @@ namespace NuGet.Configuration.Test
                     @"<?xml version=""1.0""?>
 <configuration>
 <packageSources>
-    <add key='NuGet.org' value='https://NuGet.org' />
+    <add key='NuGet.org' value='http://NuGet.org' />
 </packageSources>
 </configuration>
 ";
@@ -1733,7 +1733,7 @@ namespace NuGet.Configuration.Test
                 // Assert - 2
                 var source = Assert.Single(sources);
                 Assert.Equal("NuGet.org", source.Name);
-                Assert.Equal("https://NuGet.org", source.Source);
+                Assert.Equal("http://NuGet.org", source.Source);
                 Assert.True(source.IsEnabled);
 
                 // Act - 2
@@ -1746,7 +1746,7 @@ namespace NuGet.Configuration.Test
                         @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
 <packageSources>
- <add key=""NuGet.org"" value=""https://NuGet.org"" />
+ <add key=""NuGet.org"" value=""http://NuGet.org"" />
 </packageSources>
   <disabledPackageSources>
     <add key=""NuGet.org"" value=""true"" />
@@ -1765,7 +1765,7 @@ namespace NuGet.Configuration.Test
                 // Arrange
                 var config1Contents =
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
-<configuration>  <packageSources>    <add key=""NuGet.org"" value=""https://NuGet.org"" />  </packageSources>
+<configuration>  <packageSources>    <add key=""NuGet.org"" value=""http://NuGet.org"" />  </packageSources>
 </configuration>
 ".Replace("\r\n", "\n");
                 var config2Contents =
@@ -1773,7 +1773,7 @@ namespace NuGet.Configuration.Test
 <configuration>
 <packageSources>
     <add key='test.org' value='https://test.org' />
-    <add key='NuGet.org' value='https://NuGet.org' />
+    <add key='NuGet.org' value='http://NuGet.org' />
 </packageSources>
 </configuration>
 ".Replace("\r\n", "\n");
@@ -1804,7 +1804,7 @@ namespace NuGet.Configuration.Test
                     source =>
                         {
                             Assert.Equal("NuGet.org", source.Name);
-                            Assert.Equal("https://NuGet.org", source.Source);
+                            Assert.Equal("http://NuGet.org", source.Source);
                             Assert.True(source.IsEnabled);
                         });
 
@@ -1821,7 +1821,7 @@ namespace NuGet.Configuration.Test
 <configuration>
 <packageSources>
  <add key=""test.org"" value=""https://test.org"" />
- <add key=""NuGet.org"" value=""https://NuGet.org"" />
+ <add key=""NuGet.org"" value=""http://NuGet.org"" />
 </packageSources>
   <disabledPackageSources>
     <add key=""NuGet.org"" value=""true"" />
@@ -1840,7 +1840,7 @@ namespace NuGet.Configuration.Test
                 // Arrange
                 var config1Contents =
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
-<configuration>  <packageSources>    <add key=""NuGet.org"" value=""https://NuGet.org"" />  </packageSources>
+<configuration>  <packageSources>    <add key=""NuGet.org"" value=""http://NuGet.org"" />  </packageSources>
 </configuration>
 ";
                 var config2Contents =
@@ -1848,7 +1848,7 @@ namespace NuGet.Configuration.Test
 <configuration>
 <packageSources>
     <add key='test.org' value='https://test.org' />
-    <add key='NuGet.org' value='https://NuGet.org' />
+    <add key='NuGet.org' value='http://NuGet.org' />
 </packageSources>
 </configuration>
 ";
@@ -1879,12 +1879,12 @@ namespace NuGet.Configuration.Test
                     source =>
                         {
                             Assert.Equal("NuGet.org", source.Name);
-                            Assert.Equal("https://NuGet.org", source.Source);
+                            Assert.Equal("http://NuGet.org", source.Source);
                             Assert.True(source.IsEnabled);
                         });
 
                 // Act - 2
-                sources[1].Source = "https://new.NuGet.org";
+                sources[1].Source = "http://new.NuGet.org";
                 var sourcesToSave = new[] { sources[1], sources[0] };
 
                 packageSourceProvider.SavePackageSources(sourcesToSave);
@@ -1892,7 +1892,7 @@ namespace NuGet.Configuration.Test
                 // Assert - 2
                 Assert.Equal(
                         @"<?xml version=""1.0"" encoding=""utf-8""?>
-<configuration>  <packageSources>    <add key=""NuGet.org"" value=""https://new.NuGet.org"" />  </packageSources>
+<configuration>  <packageSources>    <add key=""NuGet.org"" value=""http://new.NuGet.org"" />  </packageSources>
 </configuration>
 ".Replace("\r\n", "\n"),
                     File.ReadAllText(Path.Combine(mockBaseDirectory.Path, "NuGet.config")).Replace("\r\n", "\n"));
@@ -1901,7 +1901,7 @@ namespace NuGet.Configuration.Test
                          @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
 <packageSources>
- <add key=""NuGet.org"" value=""https://new.NuGet.org"" />
+ <add key=""NuGet.org"" value=""http://new.NuGet.org"" />
  <add key=""test.org"" value=""https://test.org"" />
 </packageSources>
 </configuration>
@@ -1925,7 +1925,7 @@ namespace NuGet.Configuration.Test
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
 <packageSources>
-    <add key='NuGet.org' value='https://NuGet.org' />
+    <add key='NuGet.org' value='http://NuGet.org' />
 </packageSources>
 </configuration>
 ".Replace("\r\n", "\n");
@@ -1981,7 +1981,7 @@ namespace NuGet.Configuration.Test
                         @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
 <packageSources>
- <add key=""NuGet.org"" value=""https://NuGet.org"" />
+ <add key=""NuGet.org"" value=""http://NuGet.org"" />
 </packageSources>
 </configuration>
 ".Replace("\r\n", "\n"),
@@ -1999,7 +1999,7 @@ namespace NuGet.Configuration.Test
                     @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
     <packageSources>
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
         <add key=""test.org"" value=""https://test.org"" />
         <add key=""test.org"" value=""https://new.test.org"" protocolVersion=""3"" />
         <add key=""test2"" value=""https://test2.net"" />
@@ -2025,13 +2025,13 @@ namespace NuGet.Configuration.Test
                     source =>
                         {
                             Assert.Equal("nuget.org", source.Name);
-                            Assert.Equal("https://nuget.org", source.Source);
+                            Assert.Equal("http://nuget.org", source.Source);
                             Assert.True(source.IsEnabled);
                         },
                     source =>
                         {
                             Assert.Equal("test.org", source.Name);
-                            Assert.Equal("https://new.test.org", source.Source);
+                            Assert.Equal("http://new.test.org", source.Source);
                             Assert.True(source.IsEnabled);
                             Assert.Equal(3, source.ProtocolVersion);
                         },
@@ -2058,7 +2058,7 @@ namespace NuGet.Configuration.Test
         <add key=""test.org"" value=""https://test.org"" />
         <add key=""test.org"" value=""https://new2.test.org"" protocolVersion=""3"" />
         <add key=""test2"" value=""https://test2.net"" />
-        <add key=""nuget.org"" value=""https://nuget.org"" />
+        <add key=""nuget.org"" value=""http://nuget.org"" />
     </packageSources>
 </configuration>
 ".Replace("\r\n", "\n"),
@@ -2077,7 +2077,7 @@ namespace NuGet.Configuration.Test
 <configuration>
     <packageSources>
         <add key=""Microsoft and .NET""
-         value = ""https://www.nuget.org/api/v2/curated-feeds/microsoftdotnet/"" />
+         value = ""http://www.nuget.org/api/v2/curated-feeds/microsoftdotnet/"" />
         <add key=""LocalNuGet""
          value = ""C:\Temp\Nuget"" />
         <add key=""LocalNuGet1""
@@ -2130,7 +2130,7 @@ namespace NuGet.Configuration.Test
 <configuration>
     <packageSources>
         <add key=""Microsoft and .NET""
-         value = ""https://www.nuget.org/api/v2/curated-feeds/microsoftdotnet/"" />
+         value = ""http://www.nuget.org/api/v2/curated-feeds/microsoftdotnet/"" />
         <add key=""test1""
          value = ""//test/source"" />
     </packageSources>
@@ -2283,7 +2283,7 @@ namespace NuGet.Configuration.Test
                 var result = @"<?xml version=""1.0"" encoding=""utf-8""?>
 <configuration>
   <packageSources>
-    <add key=""nuget.org"" value=""https://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
+    <add key=""nuget.org"" value=""http://api.nuget.org/v3/index.json"" protocolVersion=""3"" />
   </packageSources>
 </configuration>".Replace("\r\n", "\n");
                 Assert.Equal(result, text);
@@ -2342,7 +2342,7 @@ namespace NuGet.Configuration.Test
         <add key='DefaultPushSource' value='\\myshare\packages' />
     </config>
     <packageSources>
-        <add key='NuGet.org' value='https://NuGet.org' />
+        <add key='NuGet.org' value='http://NuGet.org' />
     </packageSources>
 </configuration>";
                 string configContentWithoutDefault = configContentsWithDefault.Replace("DefaultPushSource", "WithoutDefaultPushSource");
