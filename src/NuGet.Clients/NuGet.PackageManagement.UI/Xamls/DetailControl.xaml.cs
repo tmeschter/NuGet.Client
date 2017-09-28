@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -83,8 +83,13 @@ namespace NuGet.PackageManagement.UI
         private void ProjectUninstallButtonClicked(object sender, EventArgs e)
         {
             var model = (PackageDetailControlModel)DataContext;
-            var userAction = UserAction.CreateUnInstallAction(model.Id);
-            ExecuteUserAction(userAction, NuGetActionType.Uninstall);
+            // because the code is async, it's possible that the DataContext has been changed
+            // once execution reaches here and thus 'model' could be null.
+            if (model != null)
+            {
+                var userAction = UserAction.CreateUnInstallAction(model.Id);
+                ExecuteUserAction(userAction, NuGetActionType.Uninstall);
+            }
         }
 
 
