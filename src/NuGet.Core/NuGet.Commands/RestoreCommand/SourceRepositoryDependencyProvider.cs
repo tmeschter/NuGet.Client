@@ -45,10 +45,11 @@ namespace NuGet.Commands
         private readonly static SemaphoreSlim _throttle =
             RuntimeEnvironmentHelper.IsMacOSX
                 ? new SemaphoreSlim(ConcurrencyLimit, ConcurrencyLimit)
-                : null;
+                : new SemaphoreSlim(ConcurrencyLimit2, ConcurrencyLimit2);
 
         // In order to avoid too many open files error, set concurrent requests number to 16 on Mac
         private const int ConcurrencyLimit = 16;
+        private const int ConcurrencyLimit2 = 128;
 
         /// <summary>
         /// Initializes a new <see cref="SourceRepositoryDependencyProvider" /> class.

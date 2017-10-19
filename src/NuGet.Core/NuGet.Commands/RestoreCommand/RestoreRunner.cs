@@ -221,7 +221,7 @@ namespace NuGet.Commands
 
             if (!restoreContext.DisableParallel && !RuntimeEnvironmentHelper.IsMono)
             {
-                maxTasks = Environment.ProcessorCount;
+                maxTasks = Environment.ProcessorCount * 2;
             }
 
             if (maxTasks < 1)
