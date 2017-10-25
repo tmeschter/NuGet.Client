@@ -1134,14 +1134,14 @@ namespace NuGet.Protocol.Plugins
             throw new NotImplementedException();
         }
 
-        public override Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(HashAlgorithmName hashAlgorithm, CancellationToken token)
-        {
-            throw new NotImplementedException();
-        }
-
         public override Task<bool> IsSignedAsync(CancellationToken token)
         {
             return Task.FromResult(false);
+        }
+
+        public override Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(IEnumerable<HashAlgorithmName> hashAlgorithms, CancellationToken token)
+        {
+            throw new NotImplementedException();
         }
 
         private sealed class FileStreamCreator : IDisposable

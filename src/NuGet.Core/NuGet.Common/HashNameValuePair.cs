@@ -13,12 +13,12 @@ namespace NuGet.Common
         /// <summary>
         /// Algorithm name.
         /// </summary>
-        HashAlgorithmName HashAlgorithmName { get; }
+        public HashAlgorithmName HashAlgorithmName { get; }
 
         /// <summary>
         /// Hash value.
         /// </summary>
-        byte[] HashValue { get; }
+        public byte[] HashValue { get; }
 
         /// <summary>
         /// Create a HashNameValuePair.

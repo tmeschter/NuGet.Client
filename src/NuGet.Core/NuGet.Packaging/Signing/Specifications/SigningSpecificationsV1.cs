@@ -1,6 +1,8 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using NuGet.Common;
+
 namespace NuGet.Packaging.Signing
 {
     public sealed class SigningSpecificationsV1 : SigningSpecifications
@@ -29,6 +31,16 @@ namespace NuGet.Packaging.Signing
             _signaturePath1
         };
 
+        /// <summary>
+        /// Allowed HashAlgorithmNames.
+        /// </summary>
+        private static readonly HashAlgorithmName[] _allowedHashAlgorithms = new HashAlgorithmName[]
+        {
+            HashAlgorithmName.SHA256,
+            HashAlgorithmName.SHA384,
+            HashAlgorithmName.SHA512,
+        };
+
         public override string[] AllowedPaths => _allowedPaths;
 
         public override string[] RequiredPaths => _requiredPaths;
@@ -38,6 +50,8 @@ namespace NuGet.Packaging.Signing
         public string SignaturePath1 => _signaturePath1;
 
         public string SignaturePath2 => _signaturePath2;
+
+        public override HashAlgorithmName[] AllowedHashAlgorithms => _allowedHashAlgorithms;
 
         public SigningSpecificationsV1()
             : base(_folder)

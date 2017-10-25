@@ -30,11 +30,6 @@ namespace NuGet.Packaging.Signing
         public SemanticVersion Version { get; }
 
         /// <summary>
-        /// File hashing algorithm used.
-        /// </summary>
-        public HashAlgorithmName HashAlgorithm { get; }
-
-        /// <summary>
         /// All content entries from the package excluding signing files.
         /// </summary>
         public IReadOnlyList<PackageContentManifestFileEntry> PackageEntries { get; }
@@ -47,10 +42,8 @@ namespace NuGet.Packaging.Signing
         /// <param name="packageEntries">All entries in the package except signing files.</param>
         public PackageContentManifest(
             SemanticVersion version,
-            HashAlgorithmName hashAlgorithm,
             IEnumerable<PackageContentManifestFileEntry> packageEntries)
         {
-            HashAlgorithm = hashAlgorithm;
             Version = version ?? throw new ArgumentNullException(nameof(version));
             PackageEntries = packageEntries?.AsList().AsReadOnly() ?? throw new ArgumentNullException(nameof(packageEntries));
         }
@@ -64,7 +57,6 @@ namespace NuGet.Packaging.Signing
             {
                 // Write headers
                 writer.WritePair(ManifestConstants.Version, Version.ToNormalizedString());
-                writer.WritePair(ManifestConstants.HashAlgorithm, HashAlgorithm.ToString().ToUpperInvariant());
 
                 // Order entries
                 var entries = PackageEntries.OrderBy(e => e.Path, StringComparer.Ordinal);
@@ -83,7 +75,6 @@ namespace NuGet.Packaging.Signing
         public static PackageContentManifest Load(Stream stream)
         {
             SemanticVersion version = null;
-            var hashAlgorithm = HashAlgorithmName.Unknown;
             var entries = new List<PackageContentManifestFileEntry>();
 
             using (var reader = new KeyPairFileReader(stream))
@@ -100,9 +91,6 @@ namespace NuGet.Packaging.Signing
                     ThrowInvalidFormat();
                 }
 
-                // Read hash algorithm
-                hashAlgorithm = ReadHashAlgorithm(headers);
-
                 // Read entries
                 while (!reader.EndOfStream)
                 {
@@ -111,7 +99,7 @@ namespace NuGet.Packaging.Signing
                 }
             }
 
-            return new PackageContentManifest(version, hashAlgorithm, entries);
+            return new PackageContentManifest(version, entries);
         }
 
         /// <summary>
@@ -119,36 +107,28 @@ namespace NuGet.Packaging.Signing
         /// </summary>
         private static PackageContentManifestFileEntry GetFileEntry(Dictionary<string, string> section)
         {
-            if (section.Count != 2)
-            {
-                ThrowInvalidFormat();
-            }
-
             var path = KeyPairFileUtility.GetValueOrThrow(section, ManifestConstants.Path);
-            var hashValue = KeyPairFileUtility.GetValueOrThrow(section, ManifestConstants.HashValue);
 
-            return new PackageContentManifestFileEntry(path, hashValue);
-        }
+            var hashes = new List<HashNameValuePair>(1);
 
-        /// <summary>
-        /// Get the hash algorithm and ensure that it is valid.
-        /// </summary>
-        private static HashAlgorithmName ReadHashAlgorithm(Dictionary<string, string> headers)
-        {
-            var hashAlgorithm = HashAlgorithmName.Unknown;
-            var hashAlgorithmString = KeyPairFileUtility.GetValueOrThrow(headers, ManifestConstants.HashAlgorithm);
-
-            if (Enum.TryParse<HashAlgorithmName>(hashAlgorithmString, ignoreCase: false, result: out var parsedHashAlgorithm)
-                && parsedHashAlgorithm != HashAlgorithmName.Unknown)
+            foreach (var hashEntry in section.Where(e => IsHashKey(e.Key)))
             {
-                hashAlgorithm = parsedHashAlgorithm;
+                var hashAlgorithm = GetHashAlgorithmNameFromKey(hashEntry.Key);
+
+                // Future hash algorithms will be unknown, these should be skipped.
+                if (hashAlgorithm != HashAlgorithmName.Unknown)
+                {
+                    hashes.Add(new HashNameValuePair(hashAlgorithm, Convert.FromBase64String(hashEntry.Value)));
+                }
             }
-            else
+
+            // Ensure that at least one usable hash exists
+            if (hashes.Count < 1)
             {
                 ThrowInvalidFormat();
             }
 
-            return hashAlgorithm;
+            return new PackageContentManifestFileEntry(path, hashes);
         }
 
         private static SemanticVersion ReadVersion(Dictionary<string, string> headers)
@@ -188,14 +168,60 @@ namespace NuGet.Packaging.Signing
             // Path:file
             writer.WritePair(ManifestConstants.Path, entry.Path);
 
-            // Hash-Value:hash
-            writer.WritePair(ManifestConstants.HashValue, entry.Hash);
+            foreach (var hashPair in entry.Hashes)
+            {
+                var hashKeyName = FormatHashKey(hashPair.HashAlgorithmName);
+                var hash = Convert.ToBase64String(hashPair.HashValue);
+
+                // {HashName}-HASH:hash
+                writer.WritePair(hashKeyName, hash);
+            }
+        }
+
+        /// <summary>
+        /// Creates 'HashName-Hash'
+        /// </summary>
+        private static string FormatHashKey(HashAlgorithmName hashAlgorithmName)
+        {
+            var hashName = hashAlgorithmName.ToString().ToUpperInvariant();
+            return hashName + ManifestConstants.DashHash;
+        }
+
+        /// <summary>
+        /// True if the key ends with -HASH
+        /// </summary>
+        private static bool IsHashKey(string key)
+        {
+            return (key?.EndsWith(ManifestConstants.DashHash, StringComparison.Ordinal) == true);
+        }
+
+        private static HashAlgorithmName GetHashAlgorithmNameFromKey(string hashKey)
+        {
+            var hashAlgorithmName = HashAlgorithmName.Unknown;
+
+            // Verify the key contains -HASH
+            if (IsHashKey(hashKey))
+            {
+                // Remove -HASH
+                var withoutDashHash = hashKey.Substring(0, hashKey.Length - ManifestConstants.DashHash.Length);
+
+                // Parse hash algorithm name
+                hashAlgorithmName = GetHashAlgorithmName(withoutDashHash);
+            }
+
+            return hashAlgorithmName;
+        }
+
+        private static HashAlgorithmName GetHashAlgorithmName(string hashAlgorithmName)
+        {
+            Enum.TryParse<HashAlgorithmName>(hashAlgorithmName, ignoreCase: false, result: out var parsedHashAlgorithm);
+            return parsedHashAlgorithm;
         }
 
         private class ManifestConstants
         {
             public const string Version = nameof(Version);
-            public const string HashAlgorithm = "Hash-Algorithm";
+            public const string DashHash = "-Hash";
             public const string HashValue = "Hash-Value";
             public const string Path = nameof(Path);
         }

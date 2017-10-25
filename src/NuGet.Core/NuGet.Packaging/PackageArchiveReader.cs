@@ -239,30 +239,45 @@ namespace NuGet.Packaging
             return Task.FromResult(result);
         }
 
-        public override Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(Common.HashAlgorithmName hashAlgorithm, CancellationToken token)
+        public override Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(
+            IEnumerable<Common.HashAlgorithmName> hashAlgorithms,
+            CancellationToken token)
         {
-            var hashProvider = hashAlgorithm.GetHashProvider();
+            var entries = new List<PackageContentManifestFileEntry>();
 
-            var entries = _zipArchive.Entries
-                .Select(e => new PackageContentManifestFileEntry(
-                    path: e.FullName,
-                    hash: GetEntryHash(e, hashProvider)))
+            var hashProviders = hashAlgorithms
+                .Distinct()
+                .Select(e => new KeyValuePair<Common.HashAlgorithmName, HashAlgorithm>(e, e.GetHashProvider()))
                 .ToList();
+
+            // Hash entries
+            foreach (var zipEntry in _zipArchive.Entries)
+            {
+                var hashes = new List<HashNameValuePair>(hashProviders.Count);
+
+                // Hash each file with each provider.
+                foreach (var hashProvider in hashProviders)
+                {
+                    hashes.Add(new HashNameValuePair(hashProvider.Key, GetEntryHash(zipEntry, hashProvider.Value)));
+                }
+
+                entries.Add(new PackageContentManifestFileEntry(zipEntry.FullName, hashes));
+            }
 
             return Task.FromResult<IReadOnlyList<PackageContentManifestFileEntry>>(entries);
         }
 
-        private static string GetEntryHash(ZipArchiveEntry entry, HashAlgorithm hashProvider)
+        private static byte[] GetEntryHash(ZipArchiveEntry entry, HashAlgorithm hashProvider)
         {
-            string hash = null;
+            byte[] hash = null;
 
             if (IsEmptyDirectory(entry))
             {
-                hash = "0";
+                hash = new byte[0];
             }
             else
             {
-                hash = hashProvider.ComputeHashAsBase64(entry.Open());
+                hash = hashProvider.ComputeHash(entry.Open());
             }
 
             return hash;

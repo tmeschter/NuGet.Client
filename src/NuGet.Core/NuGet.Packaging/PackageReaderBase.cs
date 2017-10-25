@@ -550,7 +550,9 @@ namespace NuGet.Packaging
 
         public abstract Task<PackageContentManifest> GetSignManifestAsync(CancellationToken token);
 
-        public abstract Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(HashAlgorithmName hashAlgorithm, CancellationToken token);
+        public abstract Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(
+            IEnumerable<Common.HashAlgorithmName> hashAlgorithms,
+            CancellationToken token);
 
         public abstract Task<bool> IsSignedAsync(CancellationToken token);
     }

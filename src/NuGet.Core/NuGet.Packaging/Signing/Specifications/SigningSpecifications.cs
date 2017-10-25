@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using NuGet.Common;
 
 namespace NuGet.Packaging.Signing
 {
@@ -32,6 +33,11 @@ namespace NuGet.Packaging.Signing
         /// Root signature folder in the package.
         /// </summary>
         public string SignatureFolder { get; }
+
+        /// <summary>
+        /// Allowed Hash Algorithms.
+        /// </summary>
+        public abstract HashAlgorithmName[] AllowedHashAlgorithms { get; }
 
         /// <summary>
         /// Initialize a signing specification with a root folder.

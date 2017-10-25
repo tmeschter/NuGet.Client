@@ -16,9 +16,9 @@ namespace NuGet.Common
         /// <remarks>Closes the stream by default.</remarks>
         /// <param name="hashAlgorithm">Algorithm to use for hashing.</param>
         /// <param name="data">Stream to hash.</param>
-        public static string ComputeHashAsBase64(this HashAlgorithm hashAlgorithm, Stream data)
+        public static byte[] ComputeHash(this HashAlgorithm hashAlgorithm, Stream data)
         {
-            return ComputeHashAsBase64(hashAlgorithm, data, leaveStreamOpen: false);
+            return ComputeHash(hashAlgorithm, data, leaveStreamOpen: false);
         }
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace NuGet.Common
         /// <param name="data">Stream to hash.</param>
         /// <param name="leaveStreamOpen">If false the stream will be closed.</param>
         /// <returns>A base64 encoded hash string.</returns>
-        public static string ComputeHashAsBase64(this HashAlgorithm hashAlgorithm, Stream data, bool leaveStreamOpen)
+        public static byte[] ComputeHash(this HashAlgorithm hashAlgorithm, Stream data, bool leaveStreamOpen)
         {
             if (hashAlgorithm == null)
             {
@@ -40,11 +40,11 @@ namespace NuGet.Common
                 throw new ArgumentNullException(nameof(data));
             }
 
-            string hash = null;
+            byte[] hash = null;
 
             try
             {
-                hash = Convert.ToBase64String(hashAlgorithm.ComputeHash(data));
+                hash = hashAlgorithm.ComputeHash(data);
             }
             finally
             {

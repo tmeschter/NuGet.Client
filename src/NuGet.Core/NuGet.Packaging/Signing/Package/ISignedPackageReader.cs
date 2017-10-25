@@ -28,7 +28,9 @@ namespace NuGet.Packaging.Signing
         /// <summary>
         /// Read and hash all package entries.
         /// </summary>
-        Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(HashAlgorithmName hashAlgorithm, CancellationToken token);
+        Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(
+            IEnumerable<HashAlgorithmName> hashAlgorithms,
+            CancellationToken token);
 
         /// <summary>
         /// Check if a package contains signing information.

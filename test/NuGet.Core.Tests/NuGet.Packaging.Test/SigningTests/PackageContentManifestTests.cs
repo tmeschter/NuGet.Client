@@ -21,10 +21,9 @@ namespace NuGet.Packaging.Test.SigningTests
             var version = new SemanticVersion(1, 0, 0);
             var files = new List<PackageContentManifestFileEntry>();
 
-            var manifest = new PackageContentManifest(version, HashAlgorithmName.SHA256, files);
+            var manifest = new PackageContentManifest(version, files);
 
             manifest.Version.ToNormalizedString().Should().Be("1.0.0");
-            manifest.HashAlgorithm.Should().Be(HashAlgorithmName.SHA256);
             manifest.PackageEntries.Should().BeEmpty();
         }
 
@@ -34,7 +33,7 @@ namespace NuGet.Packaging.Test.SigningTests
             var version = new SemanticVersion(1, 0, 0);
             var files = new List<PackageContentManifestFileEntry>();
 
-            var manifest = new PackageContentManifest(version, HashAlgorithmName.SHA256, files);
+            var manifest = new PackageContentManifest(version, files);
 
             using (var stream = new MemoryStream())
             {
@@ -47,7 +46,6 @@ namespace NuGet.Packaging.Test.SigningTests
 
                 // Verify
                 manifest2.Version.ToNormalizedString().Should().Be("1.0.0");
-                manifest2.HashAlgorithm.Should().Be(HashAlgorithmName.SHA256);
                 manifest2.PackageEntries.Should().BeEmpty();
             }
         }
@@ -58,7 +56,7 @@ namespace NuGet.Packaging.Test.SigningTests
             var version = new SemanticVersion(1, 0, 0);
             var files = new List<PackageContentManifestFileEntry>();
 
-            var manifest = new PackageContentManifest(version, HashAlgorithmName.SHA256, files);
+            var manifest = new PackageContentManifest(version, files);
 
             using (var stream = new MemoryStream())
             {
@@ -75,11 +73,11 @@ namespace NuGet.Packaging.Test.SigningTests
             var version = new SemanticVersion(1, 0, 0);
             var files = new List<PackageContentManifestFileEntry>
             {
-                new PackageContentManifestFileEntry("lib/net45/a.dll", "abc"),
-                new PackageContentManifestFileEntry("lib/net46/a.dll", "xyz")
+                new PackageContentManifestFileEntry("lib/net45/a.dll", new[] { new HashNameValuePair(HashAlgorithmName.SHA256, new byte[] { 1, 2, 3 })}),
+                new PackageContentManifestFileEntry("lib/net46/a.dll", new[] { new HashNameValuePair(HashAlgorithmName.SHA256, new byte[] { 3, 4, 5 })}),
             };
 
-            var manifest = new PackageContentManifest(version, HashAlgorithmName.SHA256, files);
+            var manifest = new PackageContentManifest(version, files);
 
             using (var stream = new MemoryStream())
             {
@@ -92,7 +90,6 @@ namespace NuGet.Packaging.Test.SigningTests
 
                 // Verify
                 manifest2.Version.ToNormalizedString().Should().Be("1.0.0");
-                manifest2.HashAlgorithm.Should().Be(HashAlgorithmName.SHA256);
                 manifest2.PackageEntries.ShouldBeEquivalentTo(files);
             }
         }
@@ -103,11 +100,11 @@ namespace NuGet.Packaging.Test.SigningTests
             var version = new SemanticVersion(1, 0, 0);
             var files = new List<PackageContentManifestFileEntry>
             {
-                new PackageContentManifestFileEntry("lib/net45/a.dll", "abc"),
-                new PackageContentManifestFileEntry("lib/net46/a.dll", "xyz")
+                new PackageContentManifestFileEntry("lib/net45/a.dll", new[] { new HashNameValuePair(HashAlgorithmName.SHA256, new byte[] { 1, 1, 1 })}),
+                new PackageContentManifestFileEntry("lib/net46/a.dll", new[] { new HashNameValuePair(HashAlgorithmName.SHA256, new byte[] { 2, 2, 2 })}),
             };
 
-            var manifest = new PackageContentManifest(version, HashAlgorithmName.SHA256, files);
+            var manifest = new PackageContentManifest(version, files);
 
             using (var stream = new MemoryStream())
             {
@@ -127,11 +124,11 @@ namespace NuGet.Packaging.Test.SigningTests
             var version = new SemanticVersion(1, 0, 0);
             var files = new List<PackageContentManifestFileEntry>
             {
-                new PackageContentManifestFileEntry("lib/net45/a.dll", "abc"),
-                new PackageContentManifestFileEntry("lib/net46/a.dll", "xyz")
+                new PackageContentManifestFileEntry("lib/net45/a.dll", new[] { new HashNameValuePair(HashAlgorithmName.SHA256, new byte[] { 1, 1, 2 })}),
+                new PackageContentManifestFileEntry("lib/net46/a.dll", new[] { new HashNameValuePair(HashAlgorithmName.SHA256, new byte[] { 2, 2, 2 })}),
             };
 
-            var manifest = new PackageContentManifest(version, HashAlgorithmName.SHA256, files);
+            var manifest = new PackageContentManifest(version, files);
 
             using (var stream = new MemoryStream())
             {

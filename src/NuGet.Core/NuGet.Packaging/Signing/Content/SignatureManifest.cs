@@ -33,9 +33,9 @@ namespace NuGet.Packaging.Signing
         /// <summary>
         /// Package content manifest hash.
         /// </summary>
-        public string SignatureTargetHashValue { get; }
+        public byte[] SignatureTargetHashValue { get; }
 
-        public SignatureManifest(SemanticVersion version, Common.HashAlgorithmName signatureTargetHashAlgorithm, string signatureTargetHashValue)
+        public SignatureManifest(SemanticVersion version, Common.HashAlgorithmName signatureTargetHashAlgorithm, byte[] signatureTargetHashValue)
         {
             Version = version ?? throw new ArgumentNullException(nameof(version));
             SignatureTargetHashAlgorithm = signatureTargetHashAlgorithm;

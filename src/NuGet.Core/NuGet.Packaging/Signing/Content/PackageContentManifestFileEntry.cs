@@ -2,6 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using NuGet.Common;
+using NuGet.Shared;
 
 namespace NuGet.Packaging.Signing
 {
@@ -16,24 +19,24 @@ namespace NuGet.Packaging.Signing
         public string Path { get; }
 
         /// <summary>
-        /// Hash-Path value in the manifest.
+        /// Hash values in the manifest.
         /// </summary>
-        public string Hash { get; }
+        public IReadOnlyList<HashNameValuePair> Hashes { get; }
 
-        public PackageContentManifestFileEntry(string path, string hash)
+        public PackageContentManifestFileEntry(string path, IEnumerable<HashNameValuePair> hashes)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
                 throw new ArgumentException(null, nameof(path));
             }
 
-            if (string.IsNullOrWhiteSpace(hash))
+            if (hashes == null)
             {
-                throw new ArgumentException(null, nameof(hash));
+                throw new ArgumentNullException(nameof(hashes));
             }
 
             Path = path;
-            Hash = hash;
+            Hashes = hashes.AsList().AsReadOnly();
         }
     }
 }

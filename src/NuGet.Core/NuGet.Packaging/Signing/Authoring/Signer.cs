@@ -45,11 +45,10 @@ namespace NuGet.Packaging.Signing
             // Verify hash is allowed
 
             // Generate manifest
-            var packageEntries = await _package.GetContentManifestEntriesAsync(request.HashAlgorithm, token);
+            var packageEntries = await _package.GetContentManifestEntriesAsync(new[] { request.HashAlgorithm }, token);
 
             var manifest = new PackageContentManifest(
                 PackageContentManifest.DefaultVersion,
-                request.HashAlgorithm,
                 packageEntries);
 
             // Generate manifest hash and add file
@@ -71,7 +70,7 @@ namespace NuGet.Packaging.Signing
                 manifest.Save(manifestStream);
                 manifestStream.Position = 0;
 
-                var hash = hashAlgorithmName.GetHashProvider().ComputeHashAsBase64(manifestStream, leaveStreamOpen: true);
+                var hash = hashAlgorithmName.GetHashProvider().ComputeHash(manifestStream, leaveStreamOpen: true);
                 manifestStream.Position = 0;
 
                 await _package.AddAsync(_specifications.ManifestPath, manifestStream, token);

@@ -212,7 +212,9 @@ namespace NuGet.Packaging
             throw new NotImplementedException();
         }
 
-        public override Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(HashAlgorithmName hashAlgorithm, CancellationToken token)
+        public override Task<IReadOnlyList<PackageContentManifestFileEntry>> GetContentManifestEntriesAsync(
+            IEnumerable<HashAlgorithmName> hashAlgorithms,
+            CancellationToken token)
         {
             throw new NotImplementedException();
         }
