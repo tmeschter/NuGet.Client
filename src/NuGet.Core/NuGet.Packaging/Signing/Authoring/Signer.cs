@@ -63,7 +63,7 @@ namespace NuGet.Packaging.Signing
             }
         }
 
-        private async Task<SignatureManifest> AddManifestAndGetHashAsync(PackageContentManifest manifest, Common.HashAlgorithmName hashAlgorithmName, CancellationToken token)
+        private async Task<SignatureManifest> AddManifestAndGetHashAsync(PackageContentManifest manifest, HashAlgorithmName hashAlgorithmName, CancellationToken token)
         {
             using (var manifestStream = new MemoryStream())
             {
@@ -75,7 +75,8 @@ namespace NuGet.Packaging.Signing
 
                 await _package.AddAsync(_specifications.ManifestPath, manifestStream, token);
 
-                return new SignatureManifest(SignatureManifest.DefaultVersion, hashAlgorithmName, hash);
+                var hashes = new[] { new HashNameValuePair(hashAlgorithmName, hash) };
+                return new SignatureManifest(SignatureManifest.DefaultVersion, hashes);
             }
         }
 

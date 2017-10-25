@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NuGet.Common;
 using NuGet.Versioning;
 
 namespace NuGet.Packaging.Signing
@@ -26,20 +27,18 @@ namespace NuGet.Packaging.Signing
         public SemanticVersion Version { get; }
 
         /// <summary>
-        /// File hashing algorithm used.
+        /// Signature hashes.
         /// </summary>
-        public Common.HashAlgorithmName SignatureTargetHashAlgorithm { get; }
+        public IReadOnlyList<HashNameValuePair> SignatureHashes { get; }
 
-        /// <summary>
-        /// Package content manifest hash.
-        /// </summary>
-        public byte[] SignatureTargetHashValue { get; }
-
-        public SignatureManifest(SemanticVersion version, Common.HashAlgorithmName signatureTargetHashAlgorithm, byte[] signatureTargetHashValue)
+        public SignatureManifest(SemanticVersion version, IEnumerable<HashNameValuePair> hashes)
         {
+            if (hashes == null)
+            {
+                throw new ArgumentNullException(nameof(hashes));
+            }
+
             Version = version ?? throw new ArgumentNullException(nameof(version));
-            SignatureTargetHashAlgorithm = signatureTargetHashAlgorithm;
-            SignatureTargetHashValue = signatureTargetHashValue ?? throw new ArgumentNullException(nameof(signatureTargetHashValue));
         }
 
         /// <summary>
@@ -51,8 +50,12 @@ namespace NuGet.Packaging.Signing
             {
                 // Write headers
                 writer.WritePair(ManifestConstants.Version, Version.ToNormalizedString());
-                writer.WritePair(ManifestConstants.SignatureTargetHashAlgorithm, SignatureTargetHashAlgorithm.ToString().ToUpperInvariant());
-                writer.WritePair(ManifestConstants.SignatureTargetHashValue, SignatureTargetHashValue);
+
+                // Write hashes
+                foreach (var hashPair in SignatureHashes)
+                {
+                    writer.WritePair(hashPair);
+                }
             }
         }
 
@@ -88,7 +91,7 @@ namespace NuGet.Packaging.Signing
         public static SignatureManifest Load(Stream stream)
         {
             SemanticVersion version = null;
-            var hashAlgorithm = Common.HashAlgorithmName.Unknown;
+            var hashAlgorithm = HashAlgorithmName.Unknown;
             string hash = null;
 
             using (var reader = new KeyPairFileReader(stream))
@@ -118,19 +121,20 @@ namespace NuGet.Packaging.Signing
                 }
             }
 
-            return new SignatureManifest(version, hashAlgorithm, hash);
+            var hashes = new[] { new HashNameValuePair(hashAlgorithm, Convert.FromBase64String(hash)) };
+            return new SignatureManifest(version, hashes);
         }
 
         /// <summary>
         /// Get the hash algorithm and ensure that it is valid.
         /// </summary>
-        private static Common.HashAlgorithmName ReadHashAlgorithm(Dictionary<string, string> headers)
+        private static HashAlgorithmName ReadHashAlgorithm(Dictionary<string, string> headers)
         {
-            var hashAlgorithm = Common.HashAlgorithmName.Unknown;
+            var hashAlgorithm = HashAlgorithmName.Unknown;
             var hashAlgorithmString = KeyPairFileUtility.GetValueOrThrow(headers, ManifestConstants.SignatureTargetHashAlgorithm);
 
-            if (Enum.TryParse<Common.HashAlgorithmName>(hashAlgorithmString, ignoreCase: false, result: out var parsedHashAlgorithm)
-                && parsedHashAlgorithm != Common.HashAlgorithmName.Unknown)
+            if (Enum.TryParse<HashAlgorithmName>(hashAlgorithmString, ignoreCase: false, result: out var parsedHashAlgorithm)
+                && parsedHashAlgorithm != HashAlgorithmName.Unknown)
             {
                 hashAlgorithm = parsedHashAlgorithm;
             }

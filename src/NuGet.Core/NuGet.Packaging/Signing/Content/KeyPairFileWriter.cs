@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using NuGet.Common;
 
 namespace NuGet.Packaging.Signing
 {
@@ -26,6 +27,15 @@ namespace NuGet.Packaging.Signing
         public void WritePair(string key, string value)
         {
             _writer.Write(FormatItem(key, value));
+            WriteEOL();
+        }
+
+        /// <summary>
+        /// Write HashName-Hash:hash with EOL to the manifest stream.
+        /// </summary>
+        public void WritePair(HashNameValuePair hashPair)
+        {
+            _writer.Write(FormatHashValue(hashPair));
             WriteEOL();
         }
 
@@ -61,6 +71,27 @@ namespace NuGet.Packaging.Signing
             }
 
             return $"{key}:{value}";
+        }
+
+        /// <summary>
+        /// HashName-Hash:hash
+        /// </summary>
+        private static string FormatHashValue(HashNameValuePair hashPair)
+        {
+            var hashKeyName = FormatHashKey(hashPair.HashAlgorithmName);
+            var hash = Convert.ToBase64String(hashPair.HashValue);
+
+            // {HashName}-HASH:hash
+            return FormatItem(hashKeyName, hash);
+        }
+
+        /// <summary>
+        /// Creates 'HashName-Hash'
+        /// </summary>
+        private static string FormatHashKey(HashAlgorithmName hashAlgorithmName)
+        {
+            var hashName = hashAlgorithmName.ToString().ToUpperInvariant();
+            return $"{hashName}-Hash";
         }
 
         public void Dispose()

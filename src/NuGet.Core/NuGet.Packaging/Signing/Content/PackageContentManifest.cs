@@ -109,18 +109,7 @@ namespace NuGet.Packaging.Signing
         {
             var path = KeyPairFileUtility.GetValueOrThrow(section, ManifestConstants.Path);
 
-            var hashes = new List<HashNameValuePair>(1);
-
-            foreach (var hashEntry in section.Where(e => IsHashKey(e.Key)))
-            {
-                var hashAlgorithm = GetHashAlgorithmNameFromKey(hashEntry.Key);
-
-                // Future hash algorithms will be unknown, these should be skipped.
-                if (hashAlgorithm != HashAlgorithmName.Unknown)
-                {
-                    hashes.Add(new HashNameValuePair(hashAlgorithm, Convert.FromBase64String(hashEntry.Value)));
-                }
-            }
+            var hashes = KeyPairFileUtility.GetHashes(section);
 
             // Ensure that at least one usable hash exists
             if (hashes.Count < 1)
@@ -170,52 +159,9 @@ namespace NuGet.Packaging.Signing
 
             foreach (var hashPair in entry.Hashes)
             {
-                var hashKeyName = FormatHashKey(hashPair.HashAlgorithmName);
-                var hash = Convert.ToBase64String(hashPair.HashValue);
-
                 // {HashName}-HASH:hash
-                writer.WritePair(hashKeyName, hash);
+                writer.WritePair(hashPair);
             }
-        }
-
-        /// <summary>
-        /// Creates 'HashName-Hash'
-        /// </summary>
-        private static string FormatHashKey(HashAlgorithmName hashAlgorithmName)
-        {
-            var hashName = hashAlgorithmName.ToString().ToUpperInvariant();
-            return hashName + ManifestConstants.DashHash;
-        }
-
-        /// <summary>
-        /// True if the key ends with -HASH
-        /// </summary>
-        private static bool IsHashKey(string key)
-        {
-            return (key?.EndsWith(ManifestConstants.DashHash, StringComparison.Ordinal) == true);
-        }
-
-        private static HashAlgorithmName GetHashAlgorithmNameFromKey(string hashKey)
-        {
-            var hashAlgorithmName = HashAlgorithmName.Unknown;
-
-            // Verify the key contains -HASH
-            if (IsHashKey(hashKey))
-            {
-                // Remove -HASH
-                var withoutDashHash = hashKey.Substring(0, hashKey.Length - ManifestConstants.DashHash.Length);
-
-                // Parse hash algorithm name
-                hashAlgorithmName = GetHashAlgorithmName(withoutDashHash);
-            }
-
-            return hashAlgorithmName;
-        }
-
-        private static HashAlgorithmName GetHashAlgorithmName(string hashAlgorithmName)
-        {
-            Enum.TryParse<HashAlgorithmName>(hashAlgorithmName, ignoreCase: false, result: out var parsedHashAlgorithm);
-            return parsedHashAlgorithm;
         }
 
         private class ManifestConstants
