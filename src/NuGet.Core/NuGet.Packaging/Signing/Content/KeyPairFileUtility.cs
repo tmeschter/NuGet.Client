@@ -63,12 +63,12 @@ namespace NuGet.Packaging.Signing
         /// <summary>
         /// True if the key ends with -HASH
         /// </summary>
-        private static bool IsHashKey(string key)
+        public static bool IsHashKey(string key)
         {
             return (key?.EndsWith(DashHash, StringComparison.Ordinal) == true);
         }
 
-        private static HashAlgorithmName GetHashAlgorithmNameFromKey(string hashKey)
+        public static HashAlgorithmName GetHashAlgorithmNameFromKey(string hashKey)
         {
             var hashAlgorithmName = HashAlgorithmName.Unknown;
 
@@ -88,7 +88,7 @@ namespace NuGet.Packaging.Signing
         /// <summary>
         /// Parse an algorithm name.
         /// </summary>
-        private static HashAlgorithmName GetHashAlgorithmName(string hashAlgorithmName)
+        public static HashAlgorithmName GetHashAlgorithmName(string hashAlgorithmName)
         {
             Enum.TryParse<HashAlgorithmName>(hashAlgorithmName, ignoreCase: false, result: out var parsedHashAlgorithm);
             return parsedHashAlgorithm;
