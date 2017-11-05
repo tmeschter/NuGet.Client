@@ -214,24 +214,20 @@ namespace NuGet.Commands
             HashSet<LibraryIdentity> allInstalledPackages,
             CancellationToken token)
         {
-            var packagesToInstall = graphs.SelectMany(g => g.Install.Where(match => allInstalledPackages.Add(match.Library)));
-            if (_request.MaxDegreeOfConcurrency <= 1)
+            var packagesToInstall = graphs.SelectMany(g => g.Install).Distinct();
+
+            foreach (var match in packagesToInstall)
             {
-                foreach (var match in packagesToInstall)
+                var installed = await InstallPackageAsync(match, token);
+
+                if (installed)
                 {
-                    await InstallPackageAsync(match, token);
-                }
-            }
-            else
-            {
-                foreach (var match in packagesToInstall)
-                {
-                    await InstallPackageAsync(match, token);
+                    allInstalledPackages.Add(match.Library);
                 }
             }
         }
 
-        private async Task InstallPackageAsync(RemoteMatch installItem, CancellationToken token)
+        private async Task<bool> InstallPackageAsync(RemoteMatch installItem, CancellationToken token)
         {
             var packageIdentity = new PackageIdentity(installItem.Library.Name, installItem.Library.Version);
 
@@ -248,7 +244,7 @@ namespace NuGet.Commands
                 _logger,
                 token))
             {
-                await PackageExtractor.InstallFromSourceAsync(
+                return await PackageExtractor.InstallFromSourceAsync(
                     packageDependency,
                     versionFolderPathContext,
                     token);
