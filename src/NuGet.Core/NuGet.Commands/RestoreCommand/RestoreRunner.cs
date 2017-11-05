@@ -82,8 +82,8 @@ namespace NuGet.Commands
 
                 var request = requests.Dequeue();
 
-                var task = Task.Run(() => ExecuteAndCommitAsync(request, token), token);
-                restoreTasks.Add(task);
+                var task = Task.Factory.StartNew((o) => ExecuteAndCommitAsync(request, token), TaskCreationOptions.LongRunning, token);
+                restoreTasks.Add(await task);
             }
 
             // Wait for all restores to finish
@@ -221,7 +221,7 @@ namespace NuGet.Commands
 
             if (!restoreContext.DisableParallel && !RuntimeEnvironmentHelper.IsMono)
             {
-                maxTasks = Environment.ProcessorCount;
+                maxTasks = Environment.ProcessorCount * 2;
             }
 
             if (maxTasks < 1)
