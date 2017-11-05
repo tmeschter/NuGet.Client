@@ -224,17 +224,10 @@ namespace NuGet.Commands
             }
             else
             {
-                var bag = new ConcurrentBag<RemoteMatch>(packagesToInstall);
-                var tasks = Enumerable.Range(0, _request.MaxDegreeOfConcurrency)
-                    .Select(async _ =>
-                    {
-                        RemoteMatch match;
-                        while (bag.TryTake(out match))
-                        {
-                            await InstallPackageAsync(match, token);
-                        }
-                    });
-                await Task.WhenAll(tasks);
+                foreach (var match in packagesToInstall)
+                {
+                    await InstallPackageAsync(match, token);
+                }
             }
         }
 
