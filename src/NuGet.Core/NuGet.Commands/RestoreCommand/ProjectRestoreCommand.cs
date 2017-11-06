@@ -64,6 +64,7 @@ namespace NuGet.Commands
 
             await InstallPackagesAsync(graphs,
                 allInstalledPackages,
+                userPackageFolder,
                 token);
 
             // Clear the in-memory cache for newly installed packages
@@ -113,6 +114,7 @@ namespace NuGet.Commands
                 // Install runtime-specific packages
                 await InstallPackagesAsync(runtimeGraphs,
                     allInstalledPackages,
+                    userPackageFolder,
                     token);
 
                 // Clear the in-memory cache for newly installed packages
@@ -212,13 +214,14 @@ namespace NuGet.Commands
 
         private async Task InstallPackagesAsync(IEnumerable<RestoreTargetGraph> graphs,
             HashSet<LibraryIdentity> allInstalledPackages,
+            NuGetv3LocalRepository userPackageFolder,
             CancellationToken token)
         {
             var packagesToInstall = graphs.SelectMany(g => g.Install).Distinct();
 
             foreach (var match in packagesToInstall)
             {
-                var installed = await InstallPackageAsync(match, token);
+                var installed = await InstallPackageAsync(match, userPackageFolder, token);
 
                 if (installed)
                 {
@@ -227,9 +230,14 @@ namespace NuGet.Commands
             }
         }
 
-        private async Task<bool> InstallPackageAsync(RemoteMatch installItem, CancellationToken token)
+        private async Task<bool> InstallPackageAsync(RemoteMatch installItem, NuGetv3LocalRepository userPackageFolder, CancellationToken token)
         {
             var packageIdentity = new PackageIdentity(installItem.Library.Name, installItem.Library.Version);
+
+            if (userPackageFolder.FindPackagesById(installItem.Library.Name).Any(e => e.Version == installItem.Library.Version))
+            {
+                return false;
+            }
 
             var versionFolderPathContext = new VersionFolderPathContext(
                 packageIdentity,
