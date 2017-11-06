@@ -26,6 +26,8 @@ namespace NuGet.Commands
 
         private readonly ProjectRestoreRequest _request;
 
+        private static readonly SemaphoreSlim _sem = new SemaphoreSlim(1, 1);
+
         public ProjectRestoreCommand(ProjectRestoreRequest request)
         {
             _logger = request.Log;
@@ -34,7 +36,6 @@ namespace NuGet.Commands
 
         public async Task<Tuple<bool, List<RestoreTargetGraph>, RuntimeGraph>> TryRestoreAsync(LibraryRange projectRange,
             IEnumerable<FrameworkRuntimePair> frameworkRuntimePairs,
-            HashSet<LibraryIdentity> allInstalledPackages,
             NuGetv3LocalRepository userPackageFolder,
             IReadOnlyList<NuGetv3LocalRepository> fallbackPackageFolders,
             RemoteDependencyWalker remoteWalker,
@@ -63,12 +64,8 @@ namespace NuGet.Commands
             graphs.AddRange(frameworkGraphs);
 
             await InstallPackagesAsync(graphs,
-                allInstalledPackages,
                 userPackageFolder,
                 token);
-
-            // Clear the in-memory cache for newly installed packages
-            userPackageFolder.ClearCacheForIds(allInstalledPackages.Select(package => package.Name));
 
             var localRepositories = new List<NuGetv3LocalRepository>();
             localRepositories.Add(userPackageFolder);
@@ -113,12 +110,8 @@ namespace NuGet.Commands
 
                 // Install runtime-specific packages
                 await InstallPackagesAsync(runtimeGraphs,
-                    allInstalledPackages,
                     userPackageFolder,
                     token);
-
-                // Clear the in-memory cache for newly installed packages
-                userPackageFolder.ClearCacheForIds(allInstalledPackages.Select(package => package.Name));
             }
 
             // Update the logger with the restore target graphs
@@ -213,49 +206,69 @@ namespace NuGet.Commands
         }
 
         private async Task InstallPackagesAsync(IEnumerable<RestoreTargetGraph> graphs,
-            HashSet<LibraryIdentity> allInstalledPackages,
             NuGetv3LocalRepository userPackageFolder,
             CancellationToken token)
         {
-            var packagesToInstall = graphs.SelectMany(g => g.Install).Distinct();
+            // Get the unique set of packages to install
+            var uniquePackages = new HashSet<LibraryIdentity>();
 
-            foreach (var match in packagesToInstall)
+            var packagesToInstall = graphs.SelectMany(g => g.Install)
+                .Where(e => e.Library.Type == LibraryType.Package && uniquePackages.Add(e.Library))
+                .OrderBy(e => e.Library)
+                .ToList();
+
+            if (packagesToInstall.Count > 0)
             {
-                var installed = await InstallPackageAsync(match, userPackageFolder, token);
+                await _sem.WaitAsync();
 
-                if (installed)
+                try
                 {
-                    allInstalledPackages.Add(match.Library);
+                    foreach (var match in packagesToInstall)
+                    {
+                        // Install the package
+                        await InstallPackageAsync(match, userPackageFolder, token);
+                    }
+                }
+                finally
+                {
+                    _sem.Release();
                 }
             }
         }
 
-        private async Task<bool> InstallPackageAsync(RemoteMatch installItem, NuGetv3LocalRepository userPackageFolder, CancellationToken token)
+        private async Task InstallPackageAsync(RemoteMatch match, NuGetv3LocalRepository userPackageFolder, CancellationToken token)
         {
-            var packageIdentity = new PackageIdentity(installItem.Library.Name, installItem.Library.Version);
+            var installed = false;
 
-            if (userPackageFolder.FindPackagesById(installItem.Library.Name).Any(e => e.Version == installItem.Library.Version))
+            // Check if the package has already been installed.
+            if (!userPackageFolder.FindPackagesById(match.Library.Name).Any(e => e.Version == match.Library.Version))
             {
-                return false;
+                var packageIdentity = new PackageIdentity(match.Library.Name, match.Library.Version);
+
+                var versionFolderPathContext = new VersionFolderPathContext(
+                    packageIdentity,
+                    _request.PackagesDirectory,
+                    _logger,
+                    _request.PackageSaveMode,
+                    _request.XmlDocFileSaveMode);
+
+                using (var packageDependency = await match.Provider.GetPackageDownloaderAsync(
+                    packageIdentity,
+                    _request.CacheContext,
+                    _logger,
+                    token))
+                {
+                    installed = await PackageExtractor.InstallFromSourceAsync(
+                        packageDependency,
+                        versionFolderPathContext,
+                        token);
+                }
             }
 
-            var versionFolderPathContext = new VersionFolderPathContext(
-                packageIdentity,
-                _request.PackagesDirectory,
-                _logger,
-                _request.PackageSaveMode,
-                _request.XmlDocFileSaveMode);
-
-            using (var packageDependency = await installItem.Provider.GetPackageDownloaderAsync(
-                packageIdentity,
-                _request.CacheContext,
-                _logger,
-                token))
+            if (installed)
             {
-                return await PackageExtractor.InstallFromSourceAsync(
-                    packageDependency,
-                    versionFolderPathContext,
-                    token);
+                // If an actual install was needed clear the cache for this id.
+                userPackageFolder.ClearCacheForIds(new[] { match.Library.Name });
             }
         }
 
