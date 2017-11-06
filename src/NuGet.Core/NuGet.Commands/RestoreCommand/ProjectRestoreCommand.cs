@@ -203,6 +203,8 @@ namespace NuGet.Commands
             return success;
         }
 
+        //private static SemaphoreSlim _sem = new SemaphoreSlim(1, 1);
+
         private async Task InstallPackagesAsync(IEnumerable<RestoreTargetGraph> graphs,
             NuGetv3LocalRepository userPackageFolder,
             CancellationToken token)
@@ -217,27 +219,43 @@ namespace NuGet.Commands
 
             if (packagesToInstall.Count > 0)
             {
-                if (_request.MaxDegreeOfConcurrency <= 1)
-                {
-                    foreach (var match in packagesToInstall)
-                    {
-                        await InstallPackageAsync(match, userPackageFolder, token);
-                    }
-                }
-                else
-                {
-                    var bag = new ConcurrentBag<RemoteMatch>(packagesToInstall);
-                    var tasks = Enumerable.Range(0, _request.MaxDegreeOfConcurrency)
-                        .Select(async _ =>
-                        {
-                            RemoteMatch match;
-                            while (bag.TryTake(out match))
-                            {
-                                await InstallPackageAsync(match, userPackageFolder, token);
-                            }
-                        });
-                    await Task.WhenAll(tasks);
-                }
+                var items = packagesToInstall.Select(e => InstallPackageAsync(e, userPackageFolder, token));
+                await Task.WhenAll(items);
+
+                //await ConcurrencyUtilities.RunAsync(packagesToInstall.Select(e => new Func<Task>(() => InstallPackageAsync(e, userPackageFolder, token))), _request.MaxDegreeOfConcurrency);
+
+                //await _sem.WaitAsync();
+
+                //try
+                //{
+
+                    //if (_request.MaxDegreeOfConcurrency <= 1)
+                    //{
+                    //    foreach (var match in packagesToInstall)
+                    //    {
+                    //        await InstallPackageAsync(match, userPackageFolder, token);
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    var bag = new ConcurrentBag<RemoteMatch>(packagesToInstall);
+                    //    var tasks = Enumerable.Range(0, _request.MaxDegreeOfConcurrency)
+                    //        .Select(async _ =>
+                    //        {
+                    //            RemoteMatch match;
+                    //            while (bag.TryTake(out match))
+                    //            {
+                    //                await InstallPackageAsync(match, userPackageFolder, token);
+                    //            }
+                    //        });
+                    //    await Task.WhenAll(tasks);
+                    //}
+                //}
+                //finally
+                //{
+                //    _sem.Release();
+                //}
+
             }
         }
 
