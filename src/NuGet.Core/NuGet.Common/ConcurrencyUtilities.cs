@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,9 +20,20 @@ namespace NuGet.Common
         private const int NumberOfRetries = 3000;
         private static readonly TimeSpan SleepDuration = TimeSpan.FromMilliseconds(10);
 
+        public async static Task RunAsync(IEnumerable<Func<Task>> tasks, int maxThreads)
+        {
+            var updatedTasks = tasks.Select(e => new Func<Task<bool>>(async () =>
+            {
+                await e();
+                return true;
+            }));
+
+            await RunAsync(updatedTasks, maxThreads);
+        }
+
         /// <summary>
         /// Run tasks in parallel.
-        /// </summary>
+        /// </summary>var 
         public async static Task<IEnumerable<T>> RunAsync<T>(IEnumerable<Func<Task<T>>> tasks, int maxThreads)
         {
             var toRun = new ConcurrentBag<Func<Task<T>>>(tasks);
@@ -39,7 +51,7 @@ namespace NuGet.Common
                 var threads = new List<Task>(maxThreads);
 
                 var count = Math.Min(toRun.Count, maxThreads);
-                for (var i=0; i < count; i++)
+                for (var i = 0; i < count; i++)
                 {
                     threads.Add(Task.Factory.StartNew(async _ =>
                     {

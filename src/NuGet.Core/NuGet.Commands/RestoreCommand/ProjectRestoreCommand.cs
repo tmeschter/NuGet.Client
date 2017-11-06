@@ -228,6 +228,10 @@ namespace NuGet.Commands
                         // Install the package
                         await InstallPackageAsync(match, userPackageFolder, token);
                     }
+
+                    var tasks = packagesToInstall.Select(e => new Func<Task>(() => InstallPackageAsync(e, userPackageFolder, token)));
+
+                    await ConcurrencyUtilities.RunAsync(tasks, _request.MaxDegreeOfConcurrency);
                 }
                 finally
                 {
