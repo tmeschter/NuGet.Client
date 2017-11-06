@@ -26,8 +26,6 @@ namespace NuGet.Commands
 
         private readonly ProjectRestoreRequest _request;
 
-        private static readonly SemaphoreSlim _sem = new SemaphoreSlim(1, 1);
-
         public ProjectRestoreCommand(ProjectRestoreRequest request)
         {
             _logger = request.Log;
@@ -219,23 +217,26 @@ namespace NuGet.Commands
 
             if (packagesToInstall.Count > 0)
             {
-                await _sem.WaitAsync();
-
-                try
+                if (_request.MaxDegreeOfConcurrency <= 1)
                 {
                     foreach (var match in packagesToInstall)
                     {
-                        // Install the package
                         await InstallPackageAsync(match, userPackageFolder, token);
                     }
-
-                    var tasks = packagesToInstall.Select(e => new Func<Task>(() => InstallPackageAsync(e, userPackageFolder, token)));
-
-                    await ConcurrencyUtilities.RunAsync(tasks, _request.MaxDegreeOfConcurrency);
                 }
-                finally
+                else
                 {
-                    _sem.Release();
+                    var bag = new ConcurrentBag<RemoteMatch>(packagesToInstall);
+                    var tasks = Enumerable.Range(0, _request.MaxDegreeOfConcurrency)
+                        .Select(async _ =>
+                        {
+                            RemoteMatch match;
+                            while (bag.TryTake(out match))
+                            {
+                                await InstallPackageAsync(match, userPackageFolder, token);
+                            }
+                        });
+                    await Task.WhenAll(tasks);
                 }
             }
         }
