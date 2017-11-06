@@ -50,6 +50,22 @@ namespace NuGet.Repositories
             _packageFileCache = packageFileCache ?? new LocalPackageFileCache();
         }
 
+        public bool Exists(string packageId, NuGetVersion version)
+        {
+            var packages = FindPackagesByIdImpl(packageId);
+            var count = packages.Count;
+            for (var i = 0; i < count; i++)
+            {
+                var candidatePackage = packages[i];
+                if (candidatePackage.Version == version)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public LocalPackageInfo FindPackage(string packageId, NuGetVersion version)
         {
             LocalPackageInfo package = null;

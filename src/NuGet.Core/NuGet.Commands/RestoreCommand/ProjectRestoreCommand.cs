@@ -241,7 +241,7 @@ namespace NuGet.Commands
             var installed = false;
 
             // Check if the package has already been installed.
-            if (!userPackageFolder.FindPackagesById(match.Library.Name).Any(e => e.Version == match.Library.Version))
+            if (!userPackageFolder.Exists(match.Library.Name, match.Library.Version))
             {
                 var packageIdentity = new PackageIdentity(match.Library.Name, match.Library.Version);
 

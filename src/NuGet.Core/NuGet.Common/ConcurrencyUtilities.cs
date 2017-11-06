@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -16,6 +18,45 @@ namespace NuGet.Common
     {
         private const int NumberOfRetries = 3000;
         private static readonly TimeSpan SleepDuration = TimeSpan.FromMilliseconds(10);
+
+        /// <summary>
+        /// Run tasks in parallel.
+        /// </summary>
+        public async static Task<IEnumerable<T>> RunAsync<T>(IEnumerable<Func<Task<T>>> tasks, int maxThreads)
+        {
+            var toRun = new ConcurrentBag<Func<Task<T>>>(tasks);
+            var results = new ConcurrentBag<T>();
+
+            if (toRun.Count < 2 || maxThreads < 2)
+            {
+                foreach (var item in toRun)
+                {
+                    results.Add(await item());
+                }
+            }
+            else
+            {
+                var threads = new List<Task>(maxThreads);
+
+                var count = Math.Min(toRun.Count, maxThreads);
+                for (var i=0; i < count; i++)
+                {
+                    threads.Add(Task.Factory.StartNew(async _ =>
+                    {
+                        while (toRun.TryTake(out var item))
+                        {
+                            results.Add(await item());
+                        }
+                    },
+                    TaskCreationOptions.LongRunning,
+                    CancellationToken.None));
+                }
+
+                await Task.WhenAll(threads);
+            }
+
+            return results;
+        }
 
         public async static Task<T> ExecuteWithFileLockedAsync<T>(string filePath,
             Func<CancellationToken, Task<T>> action,
