@@ -50,24 +50,34 @@ namespace NuGet.Common
             {
                 var threads = new List<Task>(maxThreads);
 
-                var count = Math.Min(toRun.Count, maxThreads);
+                // Number of threads, not counting the current thread.
+                var count = Math.Min(toRun.Count, maxThreads) - 1;
+
                 for (var i = 0; i < count; i++)
                 {
                     threads.Add(Task.Factory.StartNew(async _ =>
                     {
-                        while (toRun.TryTake(out var item))
-                        {
-                            results.Add(await item());
-                        }
+                        await RunTaskAsync(toRun, results);
                     },
                     TaskCreationOptions.LongRunning,
                     CancellationToken.None));
                 }
 
+                // Use this thread also
+                await RunTaskAsync(toRun, results);
+
                 await Task.WhenAll(threads);
             }
 
             return results;
+        }
+
+        private static async Task RunTaskAsync<T>(ConcurrentBag<Func<Task<T>>> toRun, ConcurrentBag<T> results)
+        {
+            while (toRun.TryTake(out var item))
+            {
+                results.Add(await item());
+            }
         }
 
         public async static Task<T> ExecuteWithFileLockedAsync<T>(string filePath,

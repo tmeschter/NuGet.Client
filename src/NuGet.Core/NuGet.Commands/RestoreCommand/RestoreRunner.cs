@@ -70,28 +70,32 @@ namespace NuGet.Commands
             var restoreTasks = new List<Task<RestoreSummary>>(maxTasks);
             var restoreSummaries = new List<RestoreSummary>(requests.Count);
 
+            restoreSummaries.AddRange(await ConcurrencyUtilities.RunAsync(
+                tasks: requests.Select(request => new Func<Task<RestoreSummary>>(() => ExecuteAndCommitAsync(request, token))),
+                maxThreads: maxTasks));
+
             // Run requests
-            while (requests.Count > 0)
-            {
-                // Throttle and wait for a task to finish if we have hit the limit
-                if (restoreTasks.Count == maxTasks)
-                {
-                    var restoreSummary = await CompleteTaskAsync(restoreTasks);
-                    restoreSummaries.Add(restoreSummary);
-                }
+            //while (requests.Count > 0)
+            //{
+            //    // Throttle and wait for a task to finish if we have hit the limit
+            //    if (restoreTasks.Count == maxTasks)
+            //    {
+            //        var restoreSummary = await CompleteTaskAsync(restoreTasks);
+            //        restoreSummaries.Add(restoreSummary);
+            //    }
 
-                var request = requests.Dequeue();
+            //    var request = requests.Dequeue();
 
-                var task = Task.Factory.StartNew((o) => ExecuteAndCommitAsync(request, token), TaskCreationOptions.LongRunning, token);
-                restoreTasks.Add(await task);
-            }
+            //    var task = Task.Factory.StartNew((o) => ExecuteAndCommitAsync(request, token), TaskCreationOptions.LongRunning, token);
+            //    restoreTasks.Add(await task);
+            //}
 
-            // Wait for all restores to finish
-            while (restoreTasks.Count > 0)
-            {
-                var restoreSummary = await CompleteTaskAsync(restoreTasks);
-                restoreSummaries.Add(restoreSummary);
-            }
+            //// Wait for all restores to finish
+            //while (restoreTasks.Count > 0)
+            //{
+            //    var restoreSummary = await CompleteTaskAsync(restoreTasks);
+            //    restoreSummaries.Add(restoreSummary);
+            //}
 
             // Summary
             return restoreSummaries;
