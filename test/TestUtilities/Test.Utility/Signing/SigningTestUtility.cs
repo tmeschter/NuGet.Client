@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Security.Cryptography;
+using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
@@ -72,6 +74,28 @@ namespace Test.Utility.Signing
         public static AsymmetricKeyParameter GetPrivateKeyParameter(X509Certificate2 cert)
         {
             return DotNetUtilities.GetKeyPair(cert.PrivateKey).Private;
+        }
+
+        /// <summary>
+        /// Generates a SignedCMS object for some content.
+        /// </summary>
+        /// <param name="content"></param>
+        /// <returns>SignedCms object</returns>
+        public static SignedCms GenerateSignedCms(X509Certificate2 cert, byte[] content)
+        {
+            var contentInfo = new ContentInfo(content);
+            var cmsSigner = new CmsSigner(SubjectIdentifierType.SubjectKeyIdentifier, cert);
+            var signingTime = new Pkcs9SigningTime();
+
+            cmsSigner.SignedAttributes.Add(
+                new CryptographicAttributeObject(
+                    signingTime.Oid,
+                    new AsnEncodedDataCollection(signingTime)));
+
+            var cms = new SignedCms(contentInfo);
+            cms.ComputeSignature(cmsSigner);
+
+            return cms;
         }
 #endif
 

@@ -2,21 +2,17 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using NuGet.Packaging.Signing;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tsp;
+using Test.Utility.Signing;
 
 namespace NuGet.Packaging.FuncTest
 {
     public static class TestTimestampUtility
     {
-        public static TimeStampTokenGenerator GenerateTimestampGenerator()
-        {
-            var keypair = TestCertificateUtility.GenerateKeyPair();
-            var cert = TestCertificateUtility.GenerateBouncyCastleCertificate(new Guid().ToString(), keypair, DateTime.MinValue, DateTime.MaxValue);
-            return new TimeStampTokenGenerator(keypair.Private, cert, Oids.Sha256Oid, Oids.BaselineTimestampPolicyOid);
-        }
-
         public static TimeStampTokenGenerator GenerateTimestampGenerator(
             AsymmetricKeyParameter keypair,
             Org.BouncyCastle.X509.X509Certificate cert,

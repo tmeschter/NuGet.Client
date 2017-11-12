@@ -6,8 +6,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using NuGet.Packaging.Signing;
 using NuGet.Test.Utility;
+using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.X509;
+using Test.Utility.Signing;
 using Xunit;
 
 namespace NuGet.Packaging.FuncTest
@@ -15,23 +19,43 @@ namespace NuGet.Packaging.FuncTest
     public class TimestampProviderTests
     {
         [Fact]
-        public void Rfc3161TimestampProvider_Success()
+        public void Rfc3161TimestampProvider_SuccessAsync()
         {
             Debugger.Launch();
+
+            var testLogger = new TestLogger();
             var timestampProvider = new TestTimestampProvider(new Uri("http://func.test"));
-            var authorCertName = "nuget@func.test";
-            var ca1 = new X509Certificate2Builder { SubjectName = $"CN={authorCertName}" }.Build();
-            var request = new TimestampRequest
+            var authorCertName = "author@nuget.func.test";
+            var tsaCertName = "tsa@nuget.func.test";
+            var data = "Test data to be signed and timestamped";
+
+            Action<X509V3CertificateGenerator> actionGenerator = delegate (X509V3CertificateGenerator gen)
             {
-                Certificate = ca1,
-                SigningSpec = SigningSpecifications.V1,
-                TimestampHashAlgorithm = Common.HashAlgorithmName.SHA256,
-                SignatureValue = new Guid().ToByteArray()
+                var usages = new[] { KeyPurposeID.IdKPTimeStamping };
+
+                gen.AddExtension(
+                    X509Extensions.ExtendedKeyUsage.Id,
+                    critical: true,
+                    extensionValue: new ExtendedKeyUsage(usages));
             };
 
-            var timestampedSignature = timestampProvider.TimestampSignatureAsync(request, new TestLogger(), CancellationToken.None);
+            using (var authorCert = SigningTestUtility.GenerateCertificate(authorCertName, modifyGenerator: null))
+            using (var tsaCert = SigningTestUtility.GenerateCertificate(tsaCertName, modifyGenerator: actionGenerator))
+            {
+                var signedCms = SigningTestUtility.GenerateSignedCms(authorCert, Encoding.ASCII.GetBytes(data));
 
+                var request = new TimestampRequest
+                {
+                    Certificate = authorCert,
+                    SigningSpec = SigningSpecifications.V1,
+                    TimestampHashAlgorithm = Common.HashAlgorithmName.SHA256,
+                    SignatureValue = signedCms.Encode()
+                };
 
+                timestampProvider.TsaCert = tsaCert;
+
+                var timestampedSignature = timestampProvider.TimestampSignatureAsync(request, new TestLogger(), CancellationToken.None);
+            }
         }
     }
 }
