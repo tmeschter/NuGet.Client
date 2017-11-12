@@ -2,17 +2,14 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
+using System.IO;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Crypto.Prng;
+using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
@@ -28,12 +25,37 @@ namespace NuGet.Packaging.FuncTest
             DateTime beginTime,
             DateTime expiryTime)
         {
-            var newCert = GenerateBouncyCastleCertificate(certName, GenerateKeyPair(), beginTime, expiryTime);
+            var keyPair = GenerateKeyPair();
+            var random = GenerateSecureRandomGenerator();
+            var signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", keyPair.Private, random);
+            var gen = new X509V3CertificateGenerator();
 
-            var dn = new X509Certificate2();
-            dn.Import(newCert.GetEncoded());
+            var CN = new X509Name("CN=" + certName);
 
-            return new X509Certificate2(DotNetUtilities.ToX509Certificate(newCert));
+            gen.SetSerialNumber(new Org.BouncyCastle.Math.BigInteger("100"));
+            gen.SetSubjectDN(CN);
+            gen.SetIssuerDN(CN);
+            gen.SetNotAfter(expiryTime);
+            gen.SetNotBefore(beginTime);
+            gen.SetPublicKey(keyPair.Public);
+
+            var certAlias = "nugetTestCert";
+            var keyAlias = "nugetTestCertKey";
+            var bcCert = gen.Generate(signatureFactory);
+            var pkcs12Store = new Pkcs12Store();
+            var certEntry = new X509CertificateEntry(bcCert);
+            pkcs12Store.SetCertificateEntry(certAlias, certEntry);
+            pkcs12Store.SetKeyEntry(keyAlias, new AsymmetricKeyEntry(keyPair.Private), new[] { certEntry });
+            X509Certificate2 keyedCert;
+            using (var pfxStream = new MemoryStream())
+            {
+                pkcs12Store.Save(pfxStream, null, new SecureRandom());
+                pfxStream.Seek(0, SeekOrigin.Begin);
+                keyedCert = new X509Certificate2(pfxStream.ToArray());
+            }
+
+            var dotnetcert = DotNetUtilities.ToX509Certificate(bcCert);
+            return new X509Certificate2(dotnetcert);
         }
 
         public static Org.BouncyCastle.X509.X509Certificate GenerateBouncyCastleCertificate(

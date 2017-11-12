@@ -18,13 +18,12 @@ namespace NuGet.Packaging.FuncTest
         public void Rfc3161TimestampProvider_Success()
         {
             Debugger.Launch();
-
             var timestampProvider = new TestTimestampProvider(new Uri("http://func.test"));
-            var authorCertName = new Guid().ToString();
-            var authorCert = TestCertificateUtility.GenerateDotNetCertificate(authorCertName, DateTime.MinValue, DateTime.MaxValue);
+            var authorCertName = "nuget@func.test";
+            var ca1 = new X509Certificate2Builder { SubjectName = $"CN={authorCertName}" }.Build();
             var request = new TimestampRequest
             {
-                Certificate = authorCert,
+                Certificate = ca1,
                 SigningSpec = SigningSpecifications.V1,
                 TimestampHashAlgorithm = Common.HashAlgorithmName.SHA256,
                 SignatureValue = new Guid().ToByteArray()
