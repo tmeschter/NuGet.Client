@@ -3,7 +3,11 @@
 
 using System;
 using System.Security.Cryptography;
+
+#if IS_DESKTOP
 using System.Security.Cryptography.Pkcs;
+#endif
+
 using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
@@ -19,6 +23,58 @@ namespace Test.Utility.Signing
 {
     public static class SigningTestUtility
     {
+        /// <summary>
+        /// Create a self signed certificate with bouncy castle.
+        /// </summary>
+        public static X509Certificate2 GenerateCertificate(string subjectName, X509Certificate2 Issuer, Action<X509V3CertificateGenerator> modifyGenerator)
+        {
+            if (string.IsNullOrEmpty(subjectName))
+            {
+                subjectName = "NuGetTest";
+            }
+
+            var random = new SecureRandom();
+            var pairGenerator = new RsaKeyPairGenerator();
+            var genParams = new KeyGenerationParameters(random, 1024);
+            pairGenerator.Init(genParams);
+            var pair = pairGenerator.GenerateKeyPair();
+
+            // Create cert
+            var certGen = new X509V3CertificateGenerator();
+            certGen.SetSubjectDN(new X509Name($"CN={subjectName}"));
+            certGen.SetIssuerDN(new X509Name($"CN={Issuer.Issuer}"));
+
+            certGen.SetNotAfter(DateTime.UtcNow.Add(TimeSpan.FromHours(1)));
+            certGen.SetNotBefore(DateTime.UtcNow.Subtract(TimeSpan.FromHours(1)));
+            certGen.SetPublicKey(pair.Public);
+
+            var serialNumber = BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), random);
+            certGen.SetSerialNumber(serialNumber);
+
+            var subjectKeyIdentifier = new SubjectKeyIdentifier(SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(pair.Public));
+            certGen.AddExtension(X509Extensions.SubjectKeyIdentifier.Id, false, subjectKeyIdentifier);
+            certGen.AddExtension(X509Extensions.KeyUsage, true, new KeyUsage(KeyUsage.KeyCertSign));
+            certGen.AddExtension(X509Extensions.BasicConstraints.Id, true, new BasicConstraints(false));
+
+            // Allow changes
+            modifyGenerator?.Invoke(certGen);
+
+#if IS_DESKTOP
+            var issuerPrivateKey= DotNetUtilities.GetKeyPair(Issuer.PrivateKey).Private;
+#else
+            var issuerPrivateKey = pair.Private;
+#endif
+            var signatureFactory = new Asn1SignatureFactory("SHA256WITHRSA", issuerPrivateKey, random);
+            var certificate = certGen.Generate(signatureFactory);
+            var certResult = new X509Certificate2(certificate.GetEncoded());
+
+#if IS_DESKTOP
+            certResult.PrivateKey = DotNetUtilities.ToRSA(pair.Private as RsaPrivateCrtKeyParameters);
+#endif
+
+            return certResult;
+        }
+
         /// <summary>
         /// Create a self signed certificate with bouncy castle.
         /// </summary>

@@ -26,7 +26,9 @@ namespace NuGet.Packaging.FuncTest
             var testLogger = new TestLogger();
             var timestampProvider = new TestTimestampProvider(new Uri("http://func.test"));
             var authorCertName = "author@nuget.func.test";
+            var authorCertCAName = "authorCA@nuget.func.test";
             var tsaCertName = "tsa@nuget.func.test";
+            var tsaCertCAName = "tsaCA@nuget.func.test";
             var data = "Test data to be signed and timestamped";
 
             Action<X509V3CertificateGenerator> actionGenerator = delegate (X509V3CertificateGenerator gen)
@@ -39,20 +41,25 @@ namespace NuGet.Packaging.FuncTest
                     extensionValue: new ExtendedKeyUsage(usages));
             };
 
+            using (var authorCACert = SigningTestUtility.GenerateCertificate(authorCertCAName, modifyGenerator: null))
+            using (var tsaCACert = SigningTestUtility.GenerateCertificate(tsaCertCAName, modifyGenerator: null))
             using (var authorCert = SigningTestUtility.GenerateCertificate(authorCertName, modifyGenerator: null))
-            using (var tsaCert = SigningTestUtility.GenerateCertificate(tsaCertName, modifyGenerator: actionGenerator))
+            using (var tsaCert = SigningTestUtility.GenerateCertificate(tsaCertName, tsaCACert, modifyGenerator: actionGenerator))
             {
                 var signedCms = SigningTestUtility.GenerateSignedCms(authorCert, Encoding.ASCII.GetBytes(data));
+                var signatureValue = signedCms.Encode();
 
                 var request = new TimestampRequest
                 {
                     Certificate = authorCert,
                     SigningSpec = SigningSpecifications.V1,
                     TimestampHashAlgorithm = Common.HashAlgorithmName.SHA256,
-                    SignatureValue = signedCms.Encode()
+                    SignatureValue = signatureValue
                 };
 
                 timestampProvider.TsaCert = tsaCert;
+                timestampProvider.TsaCACert = tsaCACert;
+                timestampProvider.SignatureValueHash = signatureValue;
 
                 var timestampedSignature = timestampProvider.TimestampSignatureAsync(request, new TestLogger(), CancellationToken.None);
             }
