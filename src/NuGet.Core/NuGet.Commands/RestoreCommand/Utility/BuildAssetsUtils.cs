@@ -240,6 +240,12 @@ namespace NuGet.Commands
                     item.Path.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
                         .Skip(3)
                         .ToArray());
+            var linkPathWithFlatten = item.OutputPath ?? item.PPOutputPath;
+
+            if (!string.IsNullOrEmpty(linkPathWithFlatten))
+            {
+                linkPath = linkPathWithFlatten;
+            }
 
             if (linkPath != null)
             {

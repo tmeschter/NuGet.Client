@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -207,37 +207,34 @@ namespace NuGet.Commands
                 var isPP = lockFileItem.Path.EndsWith(".pp", StringComparison.OrdinalIgnoreCase)
                     && !string.IsNullOrEmpty(Path.GetFileNameWithoutExtension(lockFileItem.Path));
 
-                if (copyToOutput)
+                string destination = null;
+
+                if (flatten)
                 {
-                    string destination = null;
-
-                    if (flatten)
-                    {
-                        destination = Path.GetFileName(lockFileItem.Path);
-                    }
-                    else
-                    {
-                        // Find path relative to the TxM
-                        // Ex: contentFiles/cs/net45/config/config.xml -> config/config.xml
-                        destination = GetContentFileFolderRelativeToFramework(file);
-                    }
-
-                    if (isPP)
-                    {
-                        // Remove .pp from the output file path
-                        destination = destination.Substring(0, destination.Length - 3);
-                    }
-
-                    lockFileItem.OutputPath = destination;
+                    destination = Path.GetFileName(lockFileItem.Path);
                 }
+                else
+                {
+                    // Find path relative to the TxM
+                    // Ex: contentFiles/cs/net45/config/config.xml -> config/config.xml
+                    destination = GetContentFileFolderRelativeToFramework(file);
+                }
+
+                if (isPP)
+                {
+                    // Remove .pp from the output file path
+                    destination = destination.Substring(0, destination.Length - 3);
+                }
+
+                lockFileItem.OutputPath = destination;
 
                 // Add the pp transform file if one exists
                 if (isPP)
                 {
-                    var destination = lockFileItem.Path.Substring(0, lockFileItem.Path.Length - 3);
-                    destination = GetContentFileFolderRelativeToFramework(destination);
+                    var ppDestination = lockFileItem.Path.Substring(0, lockFileItem.Path.Length - 3);
+                    ppDestination = GetContentFileFolderRelativeToFramework(ppDestination);
 
-                    lockFileItem.PPOutputPath = destination;
+                    lockFileItem.PPOutputPath = ppDestination;
                 }
 
                 results.Add(lockFileItem);
