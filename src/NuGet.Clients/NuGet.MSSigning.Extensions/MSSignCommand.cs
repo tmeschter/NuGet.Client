@@ -11,10 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.CommandLine;
-using NuGet.Commands;
-using NuGet.Common;
-using NuGet.Packaging.Signing;
-using NuGet.Protocol;
+
 
 namespace NuGet.MSSigning.Extensions
 {
@@ -61,50 +58,20 @@ namespace NuGet.MSSigning.Extensions
 
         public override async Task ExecuteCommandAsync()
         {
-            var signRequest = GetSignRequest();
-            var packages = GetPackages();
-            var signCommandRunner = new SignCommandRunner();
-            var result = await signCommandRunner.ExecuteCommandAsync(
-                packages, signRequest, Timestamper, Console, OutputDirectory, Overwrite, CancellationToken.None);
+            ValidatePackagePath();
+            ValidateCertificateInputs();
+            EnsureOutputDirectory();
 
+            var certCollection = GetCertificateCollection();
+            var cert = GetCertificate(certCollection);
+            var privateKey = GetPrivateKey(cert);
+            var packages = Arguments[1];
 
+            var result = await MSSignUtility.MssignAsync(packages, certCollection, cert, privateKey, Timestamper, HashAlgorithm, TimestampHashAlgorithm, Console, OutputDirectory, Overwrite);
             if (result != 0)
             {
                 throw new ExitCodeException(exitCode: result);
             }
-        }
-
-        public SignPackageRequest GetSignRequest()
-        {
-            ValidatePackagePath();
-            WarnIfNoTimestamper(Console);
-            ValidateCertificateInputs();
-            EnsureOutputDirectory();
-
-            var signingSpec = SigningSpecifications.V1;
-            var hashAlgorithm = ValidateAndParseHashAlgorithm(HashAlgorithm, nameof(HashAlgorithm), signingSpec);
-            var timestampHashAlgorithm = ValidateAndParseHashAlgorithm(TimestampHashAlgorithm, nameof(TimestampHashAlgorithm), signingSpec);
-            var certCollection = GetCertificateCollection();
-            var cert = GetCertificate(certCollection);
-            var privateKey = GetPrivateKey(cert);
-
-            return new SignPackageRequest()
-            {
-                SignatureHashAlgorithm = hashAlgorithm,
-                TimestampHashAlgorithm = timestampHashAlgorithm,
-                Certificate = cert,
-                PrivateKey = privateKey,
-                AdditionalCertificates = certCollection
-            };
-        }
-
-        private IEnumerable<string> GetPackages()
-        {
-            // resolve path into multiple packages if needed.
-            var packagesToSign = LocalFolderUtility.ResolvePackageFromPath(Arguments[0]);
-            LocalFolderUtility.EnsurePackageFileExists(Arguments[0], packagesToSign);
-
-            return packagesToSign;
         }
 
         private CngKey GetPrivateKey(X509Certificate2 cert)
@@ -162,14 +129,6 @@ namespace NuGet.MSSigning.Extensions
             }
         }
 
-        private void WarnIfNoTimestamper(ILogger logger)
-        {
-            if (string.IsNullOrEmpty(Timestamper))
-            {
-                logger.Log(LogMessage.CreateWarning(NuGetLogCode.NU3521, NuGetMSSignCommand.MSSignCommandNoTimestamperWarning));
-            }
-        }
-
         private void EnsureOutputDirectory()
         {
             if (!string.IsNullOrEmpty(OutputDirectory))
@@ -206,32 +165,6 @@ namespace NuGet.MSSigning.Extensions
                         NuGetMSSignCommand.MSSignCommandInvalidArgumentException,
                         nameof(CertificateFingerprint)));
             }
-        }
-
-        private Common.HashAlgorithmName ValidateAndParseHashAlgorithm(string value, string name, SigningSpecifications spec)
-        {
-            var hashAlgorithm = Common.HashAlgorithmName.SHA256;
-
-            if (!string.IsNullOrEmpty(value))
-            {
-                if (!spec.AllowedHashAlgorithms.Contains(value, StringComparer.OrdinalIgnoreCase))
-                {
-                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture,
-                        NuGetMSSignCommand.MSSignCommandInvalidArgumentException,
-                        name));
-                }
-
-                hashAlgorithm = CryptoHashUtility.GetHashAlgorithmName(value);
-            }
-
-            if (hashAlgorithm == Common.HashAlgorithmName.Unknown)
-            {
-                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture,
-                        NuGetMSSignCommand.MSSignCommandInvalidArgumentException,
-                        name));
-            }
-
-            return hashAlgorithm;
         }
     }
 }
