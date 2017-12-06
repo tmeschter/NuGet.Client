@@ -194,6 +194,9 @@ namespace NuGet.DependencyResolver
                 node.InnerNodes.Add(dependencyNode);
             }
 
+            // Free up the dictionary
+            eclipsedByWithDependencies?.Release();
+
             return node;
         }
 
@@ -203,12 +206,12 @@ namespace NuGet.DependencyResolver
 
             public EclipsedByNodes()
             {
-                _nodes = new Dictionary<string, LibraryRange[]>(StringComparer.OrdinalIgnoreCase);
+                _nodes = RentDictionary(null);
             }
 
             private EclipsedByNodes(Dictionary<string, LibraryRange[]> nodes)
             {
-                _nodes = new Dictionary<string, LibraryRange[]>(nodes, StringComparer.OrdinalIgnoreCase);
+                _nodes = RentDictionary(nodes);
             }
 
             public void Add(LibraryRange library)
@@ -325,6 +328,46 @@ namespace NuGet.DependencyResolver
                     nodes.Add(range.LibraryRange);
                 }
                 return nodes;
+            }
+
+            [ThreadStatic]
+            private static Dictionary<string, LibraryRange[]> _dictionary;
+
+            private static Dictionary<string, LibraryRange[]> RentDictionary(Dictionary<string, LibraryRange[]> existing)
+            {
+                var dictionary = _dictionary;
+                if (dictionary != null)
+                {
+                    _dictionary = null;
+
+                    if (existing != null)
+                    {
+                        foreach (var pair in existing)
+                        {
+                            dictionary.Add(pair.Key, pair.Value);
+                        }
+                    }
+
+                    return dictionary;
+                }
+
+                return existing == null
+                    ? new Dictionary<string, LibraryRange[]>(StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, LibraryRange[]>(existing, StringComparer.OrdinalIgnoreCase);
+            }
+
+            private static void ReleaseDictionary(Dictionary<string, LibraryRange[]> dictionary)
+            {
+                if (_dictionary == null)
+                {
+                    dictionary.Clear();
+                    _dictionary = dictionary;
+                }
+            }
+
+            public void Release()
+            {
+                ReleaseDictionary(_nodes);
             }
         }
 
