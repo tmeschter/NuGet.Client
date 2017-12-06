@@ -194,22 +194,51 @@ namespace NuGet.DependencyResolver
 
         private class EclipsedByNodes
         {
-            private readonly Dictionary<string, List<LibraryRange>> _nodes
-                = new Dictionary<string, List<LibraryRange>>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, LibraryRange[]> _nodes;
+
+            public EclipsedByNodes()
+            {
+                _nodes = new Dictionary<string, LibraryRange[]>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            private EclipsedByNodes(Dictionary<string, LibraryRange[]> nodes)
+            {
+                _nodes = new Dictionary<string, LibraryRange[]>(nodes, StringComparer.OrdinalIgnoreCase);
+            }
 
             public void Add(LibraryRange library)
             {
                 var id = library.Name;
                 if (!_nodes.TryGetValue(id, out var ranges))
                 {
-                    ranges = new List<LibraryRange>() { library };
+                    ranges = new LibraryRange[] { library };
                     _nodes.Add(id, ranges);
                 }
                 else
                 {
-                    if (!ranges.Contains(library))
+                    var hasRange = false;
+
+                    foreach (var range in ranges)
                     {
-                        ranges.Add(library);
+                        if (library.Equals(range))
+                        {
+                            hasRange = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasRange)
+                    {
+                        var origCount = ranges.Length;
+                        var updatedRanges = new LibraryRange[origCount + 1];
+
+                        for (var i = 0; i < origCount; i++)
+                        {
+                            updatedRanges[i] = ranges[i];
+                        }
+
+                        updatedRanges[origCount] = library;
+                        _nodes[id] = updatedRanges;
                     }
                 }
             }
@@ -280,22 +309,7 @@ namespace NuGet.DependencyResolver
 
             public EclipsedByNodes Clone()
             {
-                var nodes = new EclipsedByNodes();
-                var innerNodes = nodes._nodes;
-
-                foreach (var pair in _nodes)
-                {
-                    innerNodes.Add(pair.Key, pair.Value.ToList());
-                }
-
-                return nodes;
-            }
-
-            public EclipsedByNodes WithNode(LibraryRange range)
-            {
-                var nodes = Clone();
-                nodes.Add(range);
-                return nodes;
+                return new EclipsedByNodes(_nodes);
             }
 
             public EclipsedByNodes WithNodes(IEnumerable<LibraryDependency> dependencies)
