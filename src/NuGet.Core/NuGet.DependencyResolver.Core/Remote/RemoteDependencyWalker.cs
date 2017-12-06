@@ -127,7 +127,7 @@ namespace NuGet.DependencyResolver
             }
 
             // Add the current node to the eclipsed by list before recursing
-            var eclipsedByWithDependencies = eclipsedBy.WithNodes(node.Item.Data.Dependencies);
+            EclipsedByNodes eclipsedByWithDependencies = null;
 
             foreach (var dependency in node.Item.Data.Dependencies)
             {
@@ -148,6 +148,11 @@ namespace NuGet.DependencyResolver
                         if (tasks == null)
                         {
                             tasks = new List<Task<GraphNode<RemoteResolveResult>>>(1);
+                        }
+
+                        if (eclipsedByWithDependencies == null)
+                        {
+                            eclipsedByWithDependencies = eclipsedBy.WithNodes(node.Item.Data.Dependencies);
                         }
 
                         tasks.Add(CreateGraphNode(
