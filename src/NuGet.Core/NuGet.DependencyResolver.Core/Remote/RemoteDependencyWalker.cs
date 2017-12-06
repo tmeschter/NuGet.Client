@@ -26,7 +26,10 @@ namespace NuGet.DependencyResolver
 
         public Task<GraphNode<RemoteResolveResult>> WalkAsync(LibraryRange library, NuGetFramework framework, string runtimeIdentifier, RuntimeGraph runtimeGraph, bool recursive)
         {
-            return CreateGraphNode(library, framework, runtimeIdentifier, runtimeGraph, _ => recursive ? DependencyResult.Acceptable : DependencyResult.Eclipsed, outerEdge: null);
+            var eclipsedby = new EclipsedByNodes();
+            eclipsedby.Add(library);
+
+            return CreateGraphNode(library, framework, runtimeIdentifier, runtimeGraph, outerEdge: null, eclipsedBy: eclipsedby);
         }
 
         private async Task<GraphNode<RemoteResolveResult>> CreateGraphNode(
@@ -34,8 +37,8 @@ namespace NuGet.DependencyResolver
             NuGetFramework framework,
             string runtimeName,
             RuntimeGraph runtimeGraph,
-            Func<LibraryRange, DependencyResult> predicate,
-            GraphEdge<RemoteResolveResult> outerEdge)
+            GraphEdge<RemoteResolveResult> outerEdge,
+            EclipsedByNodes eclipsedBy)
         {
             List<LibraryDependency> dependencies = null;
             HashSet<string> runtimeDependencies = null;
@@ -123,6 +126,9 @@ namespace NuGet.DependencyResolver
                 };
             }
 
+            // Add the current node to the eclipsed by list before recursing
+            var eclipsedByWithDependencies = eclipsedBy.WithNodes(node.Item.Data.Dependencies);
+
             foreach (var dependency in node.Item.Data.Dependencies)
             {
                 // Skip dependencies if the dependency edge has 'all' excluded and
@@ -130,20 +136,15 @@ namespace NuGet.DependencyResolver
                 if (outerEdge == null
                     || dependency.SuppressParent != LibraryIncludeFlags.All)
                 {
-                    var result = predicate(dependency.LibraryRange);
+                    // Dependency edge from the current node to the dependency
+                    var innerEdge = new GraphEdge<RemoteResolveResult>(outerEdge, node.Item, dependency);
 
                     // Check for a cycle, this is needed for A (project) -> A (package)
                     // since the predicate will not be called for leaf nodes.
-                    if (StringComparer.OrdinalIgnoreCase.Equals(dependency.Name, libraryRange.Name))
-                    {
-                        result = DependencyResult.Cycle;
-                    }
+                    var result = eclipsedBy.GetDependencyResult(innerEdge);
 
                     if (result == DependencyResult.Acceptable)
                     {
-                        // Dependency edge from the current node to the dependency
-                        var innerEdge = new GraphEdge<RemoteResolveResult>(outerEdge, node.Item, dependency);
-
                         if (tasks == null)
                         {
                             tasks = new List<Task<GraphNode<RemoteResolveResult>>>(1);
@@ -154,8 +155,8 @@ namespace NuGet.DependencyResolver
                             framework,
                             runtimeName,
                             runtimeGraph,
-                            ChainPredicate(predicate, node, dependency),
-                            innerEdge));
+                            innerEdge,
+                            eclipsedByWithDependencies));
                     }
                     else
                     {
@@ -191,35 +192,152 @@ namespace NuGet.DependencyResolver
             return node;
         }
 
-        private Func<LibraryRange, DependencyResult> ChainPredicate(Func<LibraryRange, DependencyResult> predicate, GraphNode<RemoteResolveResult> node, LibraryDependency dependency)
+        private class EclipsedByNodes
         {
-            var item = node.Item;
+            private readonly Dictionary<string, List<LibraryRange>> _nodes
+                = new Dictionary<string, List<LibraryRange>>(StringComparer.OrdinalIgnoreCase);
 
-            return library =>
+            public void Add(LibraryRange library)
             {
-                if (StringComparer.OrdinalIgnoreCase.Equals(item.Data.Match.Library.Name, library.Name))
+                var id = library.Name;
+                if (!_nodes.TryGetValue(id, out var ranges))
                 {
-                    return DependencyResult.Cycle;
+                    ranges = new List<LibraryRange>() { library };
+                    _nodes.Add(id, ranges);
                 }
-
-                foreach (var d in item.Data.Dependencies)
+                else
                 {
-                    if (d != dependency && library.IsEclipsedBy(d.LibraryRange))
+                    if (!ranges.Contains(library))
                     {
-                        if (d.LibraryRange.VersionRange != null &&
-                            library.VersionRange != null &&
-                            !IsGreaterThanOrEqualTo(d.LibraryRange.VersionRange, library.VersionRange))
+                        ranges.Add(library);
+                    }
+                }
+            }
+
+            public DependencyResult GetDependencyResult(GraphEdge<RemoteResolveResult> edge)
+            {
+                // Check for a version in a parent node
+                var library = edge.Edge.LibraryRange;
+                var id = library.Name;
+                var result = DependencyResult.Acceptable;
+
+                if (_nodes.TryGetValue(id, out var parentRanges))
+                {
+                    // Check for aa circular dependency (not possible if this id hasn't been seen before)
+                    var currentEdge = edge;
+                    while (currentEdge != null)
+                    {
+                        if (StringComparer.OrdinalIgnoreCase.Equals(id, currentEdge.Item.Key.Name))
                         {
-                            return DependencyResult.PotentiallyDowngraded;
+                            return DependencyResult.Cycle;
                         }
 
-                        return DependencyResult.Eclipsed;
+                        currentEdge = currentEdge.OuterEdge;
+                    }
+
+                    // Check if a higher node eclipses or downgrades this one.
+                    foreach (var parentRange in parentRanges)
+                    {
+                        if (library.IsEclipsedBy(parentRange))
+                        {
+                            if (parentRange.VersionRange != null &&
+                                library.VersionRange != null &&
+                                !IsGreaterThanOrEqualTo(parentRange.VersionRange, library.VersionRange))
+                            {
+                                // Mark the node as downgraded, but continue checking for a node
+                                // that eclipses the library.
+                                result = DependencyResult.PotentiallyDowngraded;
+                            }
+                            else
+                            {
+                                // No action is needed if the node is eclipsed
+                                return DependencyResult.Eclipsed;
+                            }
+                        }
                     }
                 }
 
-                return predicate(library);
-            };
+                return result;
+            }
+
+            public bool IsCycle(GraphEdge<RemoteResolveResult> edge, string id)
+            {
+                var currentEdge = edge;
+
+                // TODO: check the cache first
+                while (currentEdge != null)
+                {
+                    if (StringComparer.OrdinalIgnoreCase.Equals(id, currentEdge.Item.Key.Name))
+                    {
+                        return true;
+                    }
+
+                    currentEdge = currentEdge.OuterEdge;
+                }
+
+                return false;
+            }
+
+            public EclipsedByNodes Clone()
+            {
+                var nodes = new EclipsedByNodes();
+                var innerNodes = nodes._nodes;
+
+                foreach (var pair in _nodes)
+                {
+                    innerNodes.Add(pair.Key, pair.Value.ToList());
+                }
+
+                return nodes;
+            }
+
+            public EclipsedByNodes WithNode(LibraryRange range)
+            {
+                var nodes = Clone();
+                nodes.Add(range);
+                return nodes;
+            }
+
+            public EclipsedByNodes WithNodes(IEnumerable<LibraryDependency> dependencies)
+            {
+                var nodes = Clone();
+                foreach (var range in dependencies)
+                {
+                    nodes.Add(range.LibraryRange);
+                }
+                return nodes;
+            }
         }
+
+        //private Func<LibraryRange, DependencyResult> ChainPredicate(Func<LibraryRange, DependencyResult> predicate, GraphNode<RemoteResolveResult> node, LibraryDependency dependency)
+        //{
+        //    var item = node.Item;
+
+        //    return library =>
+        //    {
+        //        if (StringComparer.OrdinalIgnoreCase.Equals(item.Data.Match.Library.Name, library.Name))
+        //        {
+        //            return DependencyResult.Cycle;
+        //        }
+
+        //        foreach (var d in item.Data.Dependencies)
+        //        {
+        //            if (d != dependency && library.IsEclipsedBy(d.LibraryRange))
+        //            {
+        //                if (d.LibraryRange.VersionRange != null &&
+        //                    library.VersionRange != null &&
+        //                    !IsGreaterThanOrEqualTo(d.LibraryRange.VersionRange, library.VersionRange))
+        //                {
+        //                    return DependencyResult.PotentiallyDowngraded;
+        //                }
+
+        //                return DependencyResult.Eclipsed;
+        //            }
+        //        }
+
+        //        return predicate(library);
+        //    };
+        //}
 
         // Verifies if minimum version specification for nearVersion is greater than the
         // minimum version specification for farVersion
