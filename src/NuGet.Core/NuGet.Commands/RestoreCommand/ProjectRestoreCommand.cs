@@ -65,10 +65,6 @@ namespace NuGet.Commands
                 userPackageFolder,
                 token);
 
-            var localRepositories = new List<NuGetv3LocalRepository>();
-            localRepositories.Add(userPackageFolder);
-            localRepositories.AddRange(fallbackPackageFolders);
-
             // Check if any non-empty RIDs exist before reading the runtime graph (runtime.json).
             // Searching all packages for runtime.json and building the graph can be expensive.
             var hasNonEmptyRIDs = frameworkRuntimePairs.Any(
@@ -78,9 +74,13 @@ namespace NuGet.Commands
             // Resolve runtime dependencies
             if (hasNonEmptyRIDs || forceRuntimeGraphCreation)
             {
-                var runtimeGraphs = new List<RestoreTargetGraph>();
+                var localRepositories = new List<NuGetv3LocalRepository>();
+                localRepositories.Add(userPackageFolder);
+                localRepositories.AddRange(fallbackPackageFolders);
 
+                var runtimeGraphs = new List<RestoreTargetGraph>();
                 var runtimeTasks = new List<Task<RestoreTargetGraph[]>>();
+
                 foreach (var graph in graphs)
                 {
                     // Get the runtime graph for this specific tfm graph
