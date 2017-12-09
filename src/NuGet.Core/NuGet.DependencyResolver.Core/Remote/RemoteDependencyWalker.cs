@@ -174,17 +174,16 @@ namespace NuGet.DependencyResolver
                 }
             }
 
-            while (tasks?.Count > 0)
+            if (tasks?.Count > 0)
             {
                 // Wait for any node to finish resolving
-                var task = await Task.WhenAny(tasks);
+                foreach (var task in tasks)
+                {
+                    var dependencyNode = await task;
+                    dependencyNode.OuterNode = node;
 
-                // Extract the resolved node
-                tasks.Remove(task);
-                var dependencyNode = await task;
-                dependencyNode.OuterNode = node;
-
-                node.InnerNodes.Add(dependencyNode);
+                    node.InnerNodes.Add(dependencyNode);
+                }
             }
 
             return node;
