@@ -26,7 +26,7 @@ namespace NuGet.DependencyResolver
 
         public Task<GraphNode<RemoteResolveResult>> WalkAsync(LibraryRange library, NuGetFramework framework, string runtimeIdentifier, RuntimeGraph runtimeGraph, bool recursive)
         {
-            return CreateGraphNode(library, framework, runtimeIdentifier, runtimeGraph, _ => recursive ? DependencyResult.Acceptable : DependencyResult.Eclipsed, outerEdge: null);
+            return CreateGraphNode(library, framework, runtimeIdentifier, runtimeGraph, outerEdge: null);
         }
 
         private async Task<GraphNode<RemoteResolveResult>> CreateGraphNode(
@@ -34,7 +34,6 @@ namespace NuGet.DependencyResolver
             NuGetFramework framework,
             string runtimeName,
             RuntimeGraph runtimeGraph,
-            Func<LibraryRange, DependencyResult> predicate,
             GraphEdge<RemoteResolveResult> outerEdge)
         {
             List<LibraryDependency> dependencies = null;
@@ -130,20 +129,21 @@ namespace NuGet.DependencyResolver
                 if (outerEdge == null
                     || dependency.SuppressParent != LibraryIncludeFlags.All)
                 {
-                    var result = predicate(dependency.LibraryRange);
+                    //var result = predicate(dependency.LibraryRange);
 
-                    // Check for a cycle, this is needed for A (project) -> A (package)
-                    // since the predicate will not be called for leaf nodes.
-                    if (StringComparer.OrdinalIgnoreCase.Equals(dependency.Name, libraryRange.Name))
-                    {
-                        result = DependencyResult.Cycle;
-                    }
+                    //// Check for a cycle, this is needed for A (project) -> A (package)
+                    //// since the predicate will not be called for leaf nodes.
+                    //if (StringComparer.OrdinalIgnoreCase.Equals(dependency.Name, libraryRange.Name))
+                    //{
+                    //    result = DependencyResult.Cycle;
+                    //}
+
+                    // Dependency edge from the current node to the dependency
+                    var innerEdge = new GraphEdge<RemoteResolveResult>(outerEdge, node.Item, dependency);
+                    var result = GetDependencyResult(innerEdge);
 
                     if (result == DependencyResult.Acceptable)
                     {
-                        // Dependency edge from the current node to the dependency
-                        var innerEdge = new GraphEdge<RemoteResolveResult>(outerEdge, node.Item, dependency);
-
                         if (tasks == null)
                         {
                             tasks = new List<Task<GraphNode<RemoteResolveResult>>>(1);
@@ -154,7 +154,6 @@ namespace NuGet.DependencyResolver
                             framework,
                             runtimeName,
                             runtimeGraph,
-                            ChainPredicate(predicate, node, dependency),
                             innerEdge));
                     }
                     else
@@ -191,24 +190,32 @@ namespace NuGet.DependencyResolver
             return node;
         }
 
-        private Func<LibraryRange, DependencyResult> ChainPredicate(Func<LibraryRange, DependencyResult> predicate, GraphNode<RemoteResolveResult> node, LibraryDependency dependency)
+        private DependencyResult GetDependencyResult(GraphEdge<RemoteResolveResult> edge)
         {
-            var item = node.Item;
+            var library = edge.Edge.LibraryRange;
+            var id = library.Name;
 
-            return library =>
+            var currentEdge = edge;
+            while (currentEdge != null)
             {
-                if (StringComparer.OrdinalIgnoreCase.Equals(item.Data.Match.Library.Name, library.Name))
+                if (StringComparer.OrdinalIgnoreCase.Equals(id, currentEdge.Item.Key.Name))
                 {
                     return DependencyResult.Cycle;
                 }
 
-                foreach (var d in item.Data.Dependencies)
+                currentEdge = currentEdge.OuterEdge;
+            }
+
+            currentEdge = edge.OuterEdge;
+            while (currentEdge != null)
+            {
+                foreach (var dependency in currentEdge.Item.Data.Dependencies)
                 {
-                    if (d != dependency && library.IsEclipsedBy(d.LibraryRange))
+                    if (library.IsEclipsedBy(dependency.LibraryRange))
                     {
-                        if (d.LibraryRange.VersionRange != null &&
+                        if (dependency.LibraryRange.VersionRange != null &&
                             library.VersionRange != null &&
-                            !IsGreaterThanOrEqualTo(d.LibraryRange.VersionRange, library.VersionRange))
+                            !IsGreaterThanOrEqualTo(dependency.LibraryRange.VersionRange, library.VersionRange))
                         {
                             return DependencyResult.PotentiallyDowngraded;
                         }
@@ -217,8 +224,10 @@ namespace NuGet.DependencyResolver
                     }
                 }
 
-                return predicate(library);
-            };
+                currentEdge = currentEdge.OuterEdge;
+            }
+
+            return DependencyResult.Acceptable;
         }
 
         // Verifies if minimum version specification for nearVersion is greater than the
