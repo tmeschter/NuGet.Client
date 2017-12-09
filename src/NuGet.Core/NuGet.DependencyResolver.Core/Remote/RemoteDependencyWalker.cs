@@ -100,7 +100,7 @@ namespace NuGet.DependencyResolver
             // Merge in runtime dependencies
             if (dependencies?.Count > 0)
             {
-                var nodeDependencies = node.Item.Data.Dependencies.AsList();
+                var nodeDependencies = node.Item.Data.Dependencies;
 
                 foreach (var nodeDep in nodeDependencies)
                 {
