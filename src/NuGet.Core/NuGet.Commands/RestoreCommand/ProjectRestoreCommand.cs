@@ -17,6 +17,7 @@ using NuGet.Packaging;
 using NuGet.Packaging.Core;
 using NuGet.Repositories;
 using NuGet.RuntimeModel;
+using NuGet.Shared;
 
 namespace NuGet.Commands
 {
@@ -288,20 +289,35 @@ namespace NuGet.Commands
             CancellationToken token)
         {
             var resultGraphs = new List<Task<RestoreTargetGraph>>();
+
             foreach (var runtimeName in runtimeIds)
             {
                 _logger.LogVerbose(string.Format(CultureInfo.CurrentCulture, Strings.Log_RestoringPackages, FrameworkRuntimePair.GetTargetGraphName(graph.Framework, runtimeName)));
 
-                resultGraphs.Add(WalkDependenciesAsync(projectRange,
-                    graph.Framework,
-                    runtimeName,
-                    runtimes,
-                    walker,
-                    context,
-                    token));
+                if (HasRuntimeDependencies(graph, runtimes, runtimeName))
+                {
+                    resultGraphs.Add(WalkDependenciesAsync(projectRange,
+                        graph.Framework,
+                        runtimeName,
+                        runtimes,
+                        walker,
+                        context,
+                        token));
+                }
+                else
+                {
+                    // Copy the graph and add the RID
+                    var copyGraph = RestoreTargetGraph.Create(runtimes, graph.Graphs, context, _logger, graph.Framework, runtimeName);
+                    resultGraphs.Add(Task.FromResult(copyGraph));
+                }
             }
 
             return Task.WhenAll(resultGraphs);
+        }
+
+        private bool HasRuntimeDependencies(RestoreTargetGraph graph, RuntimeGraph runtimeGraph, string runtime)
+        {
+            return graph.Flattened.Any(e => runtimeGraph.FindRuntimeDependencies(runtime, e.Key.Name).Any());
         }
 
         private RuntimeGraph GetRuntimeGraph(RestoreTargetGraph graph, IReadOnlyList<NuGetv3LocalRepository> localRepositories)
@@ -309,50 +325,149 @@ namespace NuGet.Commands
             _logger.LogVerbose(Strings.Log_ScanningForRuntimeJson);
             var runtimeGraph = RuntimeGraph.Empty;
 
-            // maintain visited nodes to avoid duplicate runtime graph for the same node
-            var visitedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            graph.Graphs.ForEach(node =>
+            foreach (var pair in GetRuntimeGraphs(graph, localRepositories))
             {
-                var match = node?.Item?.Data?.Match;
-                if (match == null)
-                {
-                    return;
-                }
+                _logger.LogVerbose(string.Format(CultureInfo.CurrentCulture, Strings.Log_MergingRuntimes, pair.Key));
 
-                // Ignore runtime.json from rejected nodes
-                if (node.Disposition == Disposition.Rejected)
-                {
-                    return;
-                }
+                var mergeKey = new RuntimeGraphMergeKey(runtimeGraph, pair.Value);
 
-                // ignore the same node again
-                if (!visitedNodes.Add(match.Library.Name))
-                {
-                    return;
-                }
-
-                // runtime.json can only exist in packages
-                if (match.Library.Type != LibraryType.Package)
-                {
-                    return;
-                }
-
-                // Locate the package in the local repository
-                var info = NuGetv3LocalRepositoryUtility.GetPackage(localRepositories, match.Library.Name, match.Library.Version);
-
-                if (info != null)
-                {
-                    var nextGraph = info.Package.RuntimeGraph;
-                    if (nextGraph != null)
-                    {
-                        _logger.LogVerbose(string.Format(CultureInfo.CurrentCulture, Strings.Log_MergingRuntimes, match.Library));
-                        runtimeGraph = RuntimeGraph.Merge(runtimeGraph, nextGraph);
-                    }
-                }
-            });
+                runtimeGraph = _mergeCache.GetOrAdd(mergeKey, k => RuntimeGraph.Merge(k.Left, k.Right));
+            }
 
             return runtimeGraph;
+        }
+
+        private List<KeyValuePair<LibraryIdentity, RuntimeGraph>> GetRuntimeGraphs(RestoreTargetGraph graph, IReadOnlyList<NuGetv3LocalRepository> localRepositories)
+        {
+            var runtimeGraphs = new List<KeyValuePair<LibraryIdentity, RuntimeGraph>>();
+
+            foreach (var node in graph.Flattened)
+            {
+                var library = node.Key;
+
+                if (library.Type == LibraryType.Package)
+                {
+                    // Locate the package in the local repository
+                    var info = NuGetv3LocalRepositoryUtility.GetPackage(localRepositories, library.Name, library.Version);
+
+                    if (info != null)
+                    {
+                        var runtimeGraph = info.Package.RuntimeGraph;
+
+                        if (runtimeGraph != null)
+                        {
+                            runtimeGraphs.Add(new KeyValuePair<LibraryIdentity, RuntimeGraph>(library, runtimeGraph));
+                        }
+                    }
+                }
+            }
+
+            return runtimeGraphs;
+        }
+
+        // TODO: Remove this hack!!
+        private static readonly ConcurrentDictionary<RuntimeGraphMergeKey, RuntimeGraph> _mergeCache = new ConcurrentDictionary<RuntimeGraphMergeKey, RuntimeGraph>();
+
+        private class RuntimeGraphMergeKey : IEquatable<RuntimeGraphMergeKey>
+        {
+            public RuntimeGraph Left { get; }
+
+            public RuntimeGraph Right { get; }
+
+            public RuntimeGraphMergeKey(RuntimeGraph left, RuntimeGraph right)
+            {
+                Left = left;
+                Right = right;
+            }
+
+            public bool Equals(RuntimeGraphMergeKey other)
+            {
+                if (other == null)
+                {
+                    return false;
+                }
+
+                if (ReferenceEquals(this, other))
+                {
+                    return true;
+                }
+
+                return Left.Equals(other.Left)
+                    && Right.Equals(other.Right);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as RuntimeGraphMergeKey);
+            }
+
+            public override int GetHashCode()
+            {
+                var combiner = new HashCodeCombiner();
+
+                combiner.AddObject(Left);
+                combiner.AddObject(Right);
+
+                return combiner.CombinedHash;
+            }
+        }
+
+        private class RuntimeGraphSetKey : IEquatable<RuntimeGraphSetKey>
+        {
+            public RuntimeGraph[] RuntimeGraphs { get; }
+
+            public RuntimeGraphSetKey(IEnumerable<RuntimeGraph> graphs)
+            {
+                RuntimeGraphs = graphs?.ToArray();
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as RuntimeGraphSetKey);
+            }
+
+            public override int GetHashCode()
+            {
+                var combiner = new HashCodeCombiner();
+
+                if (RuntimeGraphs != null)
+                {
+                    combiner.AddSequence(RuntimeGraphs);
+                }
+
+                return combiner.CombinedHash;
+            }
+
+            public bool Equals(RuntimeGraphSetKey other)
+            {
+                if (other == null)
+                {
+                    return false;
+                }
+
+                if (ReferenceEquals(this, other))
+                {
+                    return true;
+                }
+
+                if (RuntimeGraphs == null && other.RuntimeGraphs == null)
+                {
+                    return true;
+                }
+
+                if (RuntimeGraphs?.Length == other.RuntimeGraphs?.Length)
+                {
+                    for (var i=0; i < RuntimeGraphs.Length; i++)
+                    {
+                        if (!RuntimeGraphs[i].Equals(other.RuntimeGraphs[i]))
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
         }
     }
 }

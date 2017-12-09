@@ -172,7 +172,7 @@ namespace NuGet.RuntimeModel
             return _areCompatible.GetOrAdd(key, (tuple) => ExpandRuntimeCached(tuple.Item1).Contains(tuple.Item2, StringComparer.Ordinal));
         }
 
-        public IEnumerable<RuntimePackageDependency> FindRuntimeDependencies(string runtimeName, string packageId)
+        public bool HasDependencies(string packageId)
         {
             if (_packagesWithDependencies == null)
             {
@@ -182,7 +182,12 @@ namespace NuGet.RuntimeModel
                     StringComparer.OrdinalIgnoreCase);
             }
 
-            if (_packagesWithDependencies.Contains(packageId))
+            return _packagesWithDependencies.Contains(packageId);
+        }
+
+        public IEnumerable<RuntimePackageDependency> FindRuntimeDependencies(string runtimeName, string packageId)
+        {
+            if (HasDependencies(packageId))
             {
                 var key = new RuntimeDependencyKey(runtimeName, packageId);
 
@@ -223,6 +228,16 @@ namespace NuGet.RuntimeModel
 
             public bool Equals(RuntimeDependencyKey other)
             {
+                if (other == null)
+                {
+                    return false;
+                }
+
+                if (ReferenceEquals(this, other))
+                {
+                    return true;
+                }
+
                 return StringComparer.Ordinal.Equals(RuntimeName, other.RuntimeName)
                     && StringComparer.OrdinalIgnoreCase.Equals(PackageId, other.PackageId);
             }
@@ -235,6 +250,11 @@ namespace NuGet.RuntimeModel
                 hashCode.AddObject(PackageId, StringComparer.OrdinalIgnoreCase);
 
                 return hashCode.CombinedHash;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as RuntimeDependencyKey);
             }
         }
 
