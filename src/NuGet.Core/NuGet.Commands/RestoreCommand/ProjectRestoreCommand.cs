@@ -306,15 +306,8 @@ namespace NuGet.Commands
 
         private RuntimeGraph GetRuntimeGraph(RestoreTargetGraph graph, IReadOnlyList<NuGetv3LocalRepository> localRepositories)
         {
-            // TODO: Caching!
-            RuntimeGraph runtimeGraph;
-            if (_request.RuntimeGraphCache.TryGetValue(graph.Framework, out runtimeGraph))
-            {
-                return runtimeGraph;
-            }
-
             _logger.LogVerbose(Strings.Log_ScanningForRuntimeJson);
-            runtimeGraph = RuntimeGraph.Empty;
+            var runtimeGraph = RuntimeGraph.Empty;
 
             // maintain visited nodes to avoid duplicate runtime graph for the same node
             var visitedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -350,8 +343,7 @@ namespace NuGet.Commands
 
                 if (info != null)
                 {
-                    var package = info.Package;
-                    var nextGraph = LoadRuntimeGraph(package);
+                    var nextGraph = info.Package.RuntimeGraph;
                     if (nextGraph != null)
                     {
                         _logger.LogVerbose(string.Format(CultureInfo.CurrentCulture, Strings.Log_MergingRuntimes, match.Library));
@@ -359,27 +351,8 @@ namespace NuGet.Commands
                     }
                 }
             });
-            _request.RuntimeGraphCache[graph.Framework] = runtimeGraph;
+
             return runtimeGraph;
-        }
-
-        private RuntimeGraph LoadRuntimeGraph(LocalPackageInfo package)
-        {
-            var id = new PackageIdentity(package.Id, package.Version);
-            return _request.RuntimeGraphCacheByPackage.GetOrAdd(id, (x) => LoadRuntimeGraphCore(package));
-        }
-
-        private static RuntimeGraph LoadRuntimeGraphCore(LocalPackageInfo package)
-        {
-            var runtimeGraphFile = Path.Combine(package.ExpandedPath, RuntimeGraph.RuntimeGraphFileName);
-            if (File.Exists(runtimeGraphFile))
-            {
-                using (var stream = File.OpenRead(runtimeGraphFile))
-                {
-                    return JsonRuntimeFormat.ReadRuntimeGraph(stream);
-                }
-            }
-            return null;
         }
     }
 }
