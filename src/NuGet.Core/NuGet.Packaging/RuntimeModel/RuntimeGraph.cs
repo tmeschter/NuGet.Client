@@ -12,8 +12,16 @@ namespace NuGet.RuntimeModel
 {
     public class RuntimeGraph : IEquatable<RuntimeGraph>
     {
-        private ConcurrentDictionary<Tuple<string, string>, bool> _areCompatible 
+        private readonly ConcurrentDictionary<Tuple<string, string>, bool> _areCompatible
             = new ConcurrentDictionary<Tuple<string, string>, bool>();
+
+        private readonly ConcurrentDictionary<string, List<string>> _expandCache
+            = new ConcurrentDictionary<string, List<string>>(StringComparer.Ordinal);
+
+        private readonly ConcurrentDictionary<RuntimeDependencyKey, List<RuntimePackageDependency>> _dependencyCache
+            = new ConcurrentDictionary<RuntimeDependencyKey, List<RuntimePackageDependency>>();
+
+        private HashSet<string> _packagesWithDependencies;
 
         public static readonly string RuntimeGraphFileName = "runtime.json";
 
@@ -50,7 +58,7 @@ namespace NuGet.RuntimeModel
 
         public RuntimeGraph Clone()
         {
-            return new RuntimeGraph(Runtimes.Values.Select(r => r.Clone()), Supports.Values.Select( s => s.Clone()));
+            return new RuntimeGraph(Runtimes.Values.Select(r => r.Clone()), Supports.Values.Select(s => s.Clone()));
         }
 
         /// <summary>
@@ -99,6 +107,16 @@ namespace NuGet.RuntimeModel
 
         public IEnumerable<string> ExpandRuntime(string runtime)
         {
+            return ExpandRuntimeCached(runtime);
+        }
+
+        private List<string> ExpandRuntimeCached(string runtime)
+        {
+            return _expandCache.GetOrAdd(runtime, r => ExpandRuntimeInternal(r).ToList());
+        }
+
+        private IEnumerable<string> ExpandRuntimeInternal(string runtime)
+        {
             // Could this be faster? Sure! But we can refactor once it works and has tests
             yield return runtime;
 
@@ -143,27 +161,81 @@ namespace NuGet.RuntimeModel
         /// </returns>
         public bool AreCompatible(string criteria, string provided)
         {
+            // Identical runtimes are compatible
+            if (StringComparer.Ordinal.Equals(criteria, provided))
+            {
+                return true;
+            }
+
             var key = new Tuple<string, string>(criteria, provided);
 
-            return _areCompatible.GetOrAdd(key, (tuple) => ExpandRuntime(tuple.Item1).Contains(tuple.Item2));
+            return _areCompatible.GetOrAdd(key, (tuple) => ExpandRuntimeCached(tuple.Item1).Contains(tuple.Item2, StringComparer.Ordinal));
         }
 
         public IEnumerable<RuntimePackageDependency> FindRuntimeDependencies(string runtimeName, string packageId)
         {
-            // PERF: We could cache this for a particular (runtimeName,packageId) pair.
-            foreach (var expandedRuntime in ExpandRuntime(runtimeName))
+            if (_packagesWithDependencies == null)
+            {
+                // Find all packages that have runtime dependencies and cache this index.
+                _packagesWithDependencies = new HashSet<string>(
+                    Runtimes.SelectMany(e => e.Value.RuntimeDependencySets.Select(f => f.Key)),
+                    StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (_packagesWithDependencies.Contains(packageId))
+            {
+                var key = new RuntimeDependencyKey(runtimeName, packageId);
+
+                return _dependencyCache.GetOrAdd(key, k => FindRuntimeDependenciesInternal(k));
+            }
+
+            return Enumerable.Empty<RuntimePackageDependency>();
+        }
+
+        private List<RuntimePackageDependency> FindRuntimeDependenciesInternal(RuntimeDependencyKey key)
+        {
+            foreach (var expandedRuntime in ExpandRuntimeCached(key.RuntimeName))
             {
                 RuntimeDescription runtimeDescription;
                 if (Runtimes.TryGetValue(expandedRuntime, out runtimeDescription))
                 {
                     RuntimeDependencySet dependencySet;
-                    if (runtimeDescription.RuntimeDependencySets.TryGetValue(packageId, out dependencySet))
+                    if (runtimeDescription.RuntimeDependencySets.TryGetValue(key.PackageId, out dependencySet))
                     {
-                        return dependencySet.Dependencies.Values;
+                        return dependencySet.Dependencies.Values.AsList();
                     }
                 }
             }
-            return Enumerable.Empty<RuntimePackageDependency>();
+            return new List<RuntimePackageDependency>();
+        }
+
+        private sealed class RuntimeDependencyKey : IEquatable<RuntimeDependencyKey>
+        {
+            public string RuntimeName { get; }
+
+            public string PackageId { get; }
+
+            public RuntimeDependencyKey(string runtimeName, string packageId)
+            {
+                RuntimeName = runtimeName;
+                PackageId = packageId;
+            }
+
+            public bool Equals(RuntimeDependencyKey other)
+            {
+                return StringComparer.Ordinal.Equals(RuntimeName, other.RuntimeName)
+                    && StringComparer.OrdinalIgnoreCase.Equals(PackageId, other.PackageId);
+            }
+
+            public override int GetHashCode()
+            {
+                var hashCode = new HashCodeCombiner();
+
+                hashCode.AddObject(RuntimeName, StringComparer.Ordinal);
+                hashCode.AddObject(PackageId, StringComparer.OrdinalIgnoreCase);
+
+                return hashCode.CombinedHash;
+            }
         }
 
         public bool Equals(RuntimeGraph other)
