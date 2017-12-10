@@ -307,7 +307,7 @@ namespace NuGet.Commands
                 else
                 {
                     // Copy the graph and add the RID
-                    var copyGraph = RestoreTargetGraph.Create(runtimes, graph.Graphs, context, _logger, graph.Framework, runtimeName);
+                    var copyGraph = graph.WithRuntime(runtimeName, runtimes);
                     resultGraphs.Add(Task.FromResult(copyGraph));
                 }
             }

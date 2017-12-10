@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -83,6 +83,11 @@ namespace NuGet.Commands
             AnalyzeResult = analyzeResult;
             Unresolved = unresolved;
             ResolvedDependencies = resolvedDependencies;
+        }
+
+        public RestoreTargetGraph WithRuntime(string runtime, RuntimeGraph runtimeGraph)
+        {
+            return new RestoreTargetGraph(Conflicts, Framework, runtime, runtimeGraph, Graphs, Install, Flattened, Unresolved, AnalyzeResult, ResolvedDependencies);
         }
 
         public static RestoreTargetGraph Create(IEnumerable<GraphNode<RemoteResolveResult>> graphs, RemoteWalkContext context, ILogger logger, NuGetFramework framework)
