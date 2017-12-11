@@ -171,12 +171,12 @@ namespace NuGet.Protocol
         private RuntimeGraph GetRuntimeGraph(string expandedPath)
         {
             // Check the in memory file list to see if runtime.json exists.
-            var fileName = GetOrAddFiles(expandedPath).Value
-                .FirstOrDefault(e => StringComparer.OrdinalIgnoreCase.Equals(e, RuntimeGraph.RuntimeGraphFileName));
+            //var fileName = GetOrAddFiles(expandedPath).Value
+            //    .FirstOrDefault(e => StringComparer.OrdinalIgnoreCase.Equals(e, RuntimeGraph.RuntimeGraphFileName));
 
-            if (fileName != null)
+            var runtimeGraphFile = Path.Combine(expandedPath, RuntimeGraph.RuntimeGraphFileName);
+            if (File.Exists(runtimeGraphFile))
             {
-                var runtimeGraphFile = Path.Combine(expandedPath, fileName);
                 using (var stream = File.OpenRead(runtimeGraphFile))
                 {
                     return JsonRuntimeFormat.ReadRuntimeGraph(stream);
