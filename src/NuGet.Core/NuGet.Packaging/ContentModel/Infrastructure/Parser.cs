@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -14,6 +14,8 @@ namespace NuGet.ContentModel.Infrastructure
         private readonly Dictionary<string, object> _defaults;
         private readonly PatternTable _table;
 
+        public string Folder { get; private set; }
+
         public PatternExpression(PatternDefinition pattern)
         {
             _table = pattern.Table;
@@ -23,10 +25,13 @@ namespace NuGet.ContentModel.Infrastructure
 
         private void Initialize(string pattern)
         {
+            Folder = pattern.Substring(0, pattern.IndexOf('/'));
+
             for (var scanIndex = 0; scanIndex < pattern.Length;)
             {
                 var beginToken = pattern.Length;
                 var endToken = pattern.Length;
+
                 for (var i = scanIndex; i < pattern.Length; i++)
                 {
                     var ch = pattern[i];

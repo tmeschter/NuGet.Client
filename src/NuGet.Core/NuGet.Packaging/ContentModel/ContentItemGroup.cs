@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
@@ -9,13 +9,13 @@ namespace NuGet.ContentModel
     [DebuggerDisplay("Items: {Items.Count}, Properties: {Properties.Count}")]
     public class ContentItemGroup
     {
-        public ContentItemGroup()
+        public ContentItemGroup(IReadOnlyDictionary<string, object> properties)
         {
-            Properties = new Dictionary<string, object>();
+            Properties = properties ?? new Dictionary<string, object>();
             Items = new List<ContentItem>();
         }
 
-        public IDictionary<string, object> Properties { get; }
+        public IReadOnlyDictionary<string, object> Properties { get; }
 
         public IList<ContentItem> Items { get; }
     }

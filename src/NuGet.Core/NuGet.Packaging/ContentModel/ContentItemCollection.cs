@@ -11,7 +11,7 @@ namespace NuGet.ContentModel
 {
     public class ContentItemCollection
     {
-        private List<Asset> _assets;
+        private readonly Dictionary<string, List<Asset>> _assets = new Dictionary<string, List<Asset>>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// True if lib/contract exists
@@ -21,80 +21,117 @@ namespace NuGet.ContentModel
         public void Load(IEnumerable<string> paths)
         {
             // Read already loaded assets
-            _assets = new List<Asset>();
-
             foreach (var path in paths)
             {
                 // Skip files in the root of the directory
-                if (IsValidAsset(path))
+                var folder = GetFolder(path);
+                if (folder != null)
                 {
-                    _assets.Add(new Asset()
-                    {
-                        Path = path
-                    });
+                    AddAsset(path, folder);
 
                     if (path.StartsWith("lib/contract", StringComparison.Ordinal))
                     {
                         HasContract = true;
-
-                        _assets.Add(new Asset
-                        {
-                            Path = "ref/any" + path.Substring("lib/contract".Length)
-                        });
+                        AddAsset("ref/any" + path.Substring("lib/contract".Length), "ref");
                     }
                 }
             }
+        }
+
+        private void AddAsset(string path, string folder)
+        {
+            var asset = new Asset()
+            {
+                Path = path,
+                Folder = folder
+            };
+
+            if (_assets.TryGetValue(folder, out var assets))
+            {
+                assets.Add(asset);
+            }
+            else
+            {
+                _assets.Add(folder, new List<Asset>() { asset });
+            }
+        }
+
+        private List<Asset> GetAssetsOrNull(PatternExpression pattern)
+        {
+            if (_assets.TryGetValue(pattern.Folder, out var items))
+            {
+                return items;
+            }
+
+            return null;
         }
 
         public IEnumerable<ContentItem> FindItems(PatternSet definition)
         {
-            return FindItemsImplementation(definition, _assets);
+            return FindItemsImplementation(definition, _assets.SelectMany(e => e.Value));
         }
 
         public IEnumerable<ContentItemGroup> FindItemGroups(PatternSet definition)
         {
+            return FindItemGroupsOrNull(definition) ?? Enumerable.Empty<ContentItemGroup>();
+        }
+
+        public List<ContentItemGroup> FindItemGroupsOrNull(PatternSet definition)
+        {
+            List<ContentItemGroup> result = null;
+
             if (_assets.Count > 0)
             {
                 var groupPatterns = definition.GroupExpressions;
 
-                List<Tuple<ContentItem, Asset>> groupAssets = null;
-                foreach (var asset in _assets)
+                Dictionary<ContentItem, List<Asset>> groups = null;
+                foreach (var groupPattern in groupPatterns)
                 {
-                    foreach (var groupPattern in groupPatterns)
+                    var assets = GetAssetsOrNull(groupPattern);
+                    if (assets != null)
                     {
-                        var item = groupPattern.Match(asset.Path, definition.PropertyDefinitions);
-                        if (item != null)
+                        foreach (var asset in assets)
                         {
-                            if (groupAssets == null)
+                            var item = groupPattern.Match(asset.Path, definition.PropertyDefinitions);
+                            if (item != null)
                             {
-                                groupAssets = new List<Tuple<ContentItem, Asset>>(1);
-                            }
+                                if (groups == null)
+                                {
+                                    groups = new Dictionary<ContentItem, List<Asset>>(GroupComparer.DefaultComparer);
+                                }
 
-                            groupAssets.Add(Tuple.Create(item, asset));
+                                if (groups.TryGetValue(item, out var assetValues))
+                                {
+                                    assetValues.Add(asset);
+                                }
+                                else
+                                {
+                                    groups.Add(item, new List<Asset>() { asset });
+                                }
+                            }
                         }
                     }
                 }
 
-                if (groupAssets?.Count > 0)
+                if (groups != null)
                 {
-                    foreach (var grouping in groupAssets.GroupBy(key => key.Item1, GroupComparer.DefaultComparer))
+                    foreach (var grouping in groups)
                     {
-                        var group = new ContentItemGroup();
+                        var group = new ContentItemGroup(grouping.Key.Properties);
 
-                        foreach (var property in grouping.Key.Properties)
+                        FindItemsImplementation(definition, grouping.Value, group.Items);
+
+                        if (result == null)
                         {
-                            group.Properties.Add(property.Key, property.Value);
+                            result = new List<ContentItemGroup>(1);
                         }
 
-                        foreach (var item in FindItemsImplementation(definition, grouping.Select(match => match.Item2)))
-                        {
-                            group.Items.Add(item);
-                        }
-
-                        yield return group;
+                        result.Add(group);
                     }
                 }
             }
+
+            return result;
         }
 
         public bool HasItemGroup(SelectionCriteria criteria, params PatternSet[] definitions)
@@ -106,92 +143,95 @@ namespace NuGet.ContentModel
         {
             foreach (var definition in definitions)
             {
-                var itemGroups = FindItemGroups(definition).ToList();
-                foreach (var criteriaEntry in criteria.Entries)
+                var itemGroups = FindItemGroupsOrNull(definition);
+                if (itemGroups != null)
                 {
-                    ContentItemGroup bestGroup = null;
-                    var bestAmbiguity = false;
-
-                    foreach (var itemGroup in itemGroups)
+                    foreach (var criteriaEntry in criteria.Entries)
                     {
-                        var groupIsValid = true;
-                        foreach (var criteriaProperty in criteriaEntry.Properties)
+                        ContentItemGroup bestGroup = null;
+                        var bestAmbiguity = false;
+
+                        foreach (var itemGroup in itemGroups)
                         {
-                            if (criteriaProperty.Value == null)
+                            var groupIsValid = true;
+                            foreach (var criteriaProperty in criteriaEntry.Properties)
                             {
-                                if (itemGroup.Properties.ContainsKey(criteriaProperty.Key))
+                                if (criteriaProperty.Value == null)
                                 {
-                                    groupIsValid = false;
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                object itemProperty;
-                                if (!itemGroup.Properties.TryGetValue(criteriaProperty.Key, out itemProperty))
-                                {
-                                    groupIsValid = false;
-                                    break;
-                                }
-                                ContentPropertyDefinition propertyDefinition;
-                                if (!definition.PropertyDefinitions.TryGetValue(criteriaProperty.Key, out propertyDefinition))
-                                {
-                                    groupIsValid = false;
-                                    break;
-                                }
-                                if (!propertyDefinition.IsCriteriaSatisfied(criteriaProperty.Value, itemProperty))
-                                {
-                                    groupIsValid = false;
-                                    break;
-                                }
-                            }
-                        }
-                        if (groupIsValid)
-                        {
-                            if (bestGroup == null)
-                            {
-                                bestGroup = itemGroup;
-                            }
-                            else
-                            {
-                                var groupComparison = 0;
-                                foreach (var criteriaProperty in criteriaEntry.Properties)
-                                {
-                                    if (criteriaProperty.Value == null)
+                                    if (itemGroup.Properties.ContainsKey(criteriaProperty.Key))
                                     {
-                                        continue;
-                                    }
-                                    else
-                                    {
-                                        var bestGroupValue = bestGroup.Properties[criteriaProperty.Key];
-                                        var itemGroupValue = itemGroup.Properties[criteriaProperty.Key];
-                                        var propertyDefinition = definition.PropertyDefinitions[criteriaProperty.Key];
-                                        groupComparison = propertyDefinition.Compare(criteriaProperty.Value, bestGroupValue, itemGroupValue);
-                                        if (groupComparison != 0)
-                                        {
-                                            break;
-                                        }
+                                        groupIsValid = false;
+                                        break;
                                     }
                                 }
-                                if (groupComparison > 0)
+                                else
+                                {
+                                    object itemProperty;
+                                    if (!itemGroup.Properties.TryGetValue(criteriaProperty.Key, out itemProperty))
+                                    {
+                                        groupIsValid = false;
+                                        break;
+                                    }
+                                    ContentPropertyDefinition propertyDefinition;
+                                    if (!definition.PropertyDefinitions.TryGetValue(criteriaProperty.Key, out propertyDefinition))
+                                    {
+                                        groupIsValid = false;
+                                        break;
+                                    }
+                                    if (!propertyDefinition.IsCriteriaSatisfied(criteriaProperty.Value, itemProperty))
+                                    {
+                                        groupIsValid = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (groupIsValid)
+                            {
+                                if (bestGroup == null)
                                 {
                                     bestGroup = itemGroup;
-                                    bestAmbiguity = false;
                                 }
-                                else if (groupComparison == 0)
+                                else
                                 {
-                                    bestAmbiguity = true;
+                                    var groupComparison = 0;
+                                    foreach (var criteriaProperty in criteriaEntry.Properties)
+                                    {
+                                        if (criteriaProperty.Value == null)
+                                        {
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            var bestGroupValue = bestGroup.Properties[criteriaProperty.Key];
+                                            var itemGroupValue = itemGroup.Properties[criteriaProperty.Key];
+                                            var propertyDefinition = definition.PropertyDefinitions[criteriaProperty.Key];
+                                            groupComparison = propertyDefinition.Compare(criteriaProperty.Value, bestGroupValue, itemGroupValue);
+                                            if (groupComparison != 0)
+                                            {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (groupComparison > 0)
+                                    {
+                                        bestGroup = itemGroup;
+                                        bestAmbiguity = false;
+                                    }
+                                    else if (groupComparison == 0)
+                                    {
+                                        bestAmbiguity = true;
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (bestGroup != null)
-                    {
-                        if (bestAmbiguity)
+                        if (bestGroup != null)
                         {
-                            // var x = 5;
+                            if (bestAmbiguity)
+                            {
+                                // var x = 5;
+                            }
+                            return bestGroup;
                         }
-                        return bestGroup;
                     }
                 }
             }
@@ -208,31 +248,55 @@ namespace NuGet.ContentModel
 
                 foreach (var pathPattern in pathPatterns)
                 {
-                    var contentItem = pathPattern.Match(path, definition.PropertyDefinitions);
-                    if (contentItem != null)
+                    if (StringComparer.OrdinalIgnoreCase.Equals(pathPattern.Folder, asset.Folder))
                     {
-                        yield return contentItem;
-                        break;
+                        var contentItem = pathPattern.Match(path, definition.PropertyDefinitions);
+                        if (contentItem != null)
+                        {
+                            yield return contentItem;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void FindItemsImplementation(PatternSet definition, List<Asset> assets, IList<ContentItem> contentItems)
+        {
+            var pathPatterns = definition.PathExpressions;
+
+            foreach (var asset in assets)
+            {
+                var path = asset.Path;
+
+                foreach (var pathPattern in pathPatterns)
+                {
+                    if (StringComparer.OrdinalIgnoreCase.Equals(pathPattern.Folder, asset.Folder))
+                    {
+                        var contentItem = pathPattern.Match(path, definition.PropertyDefinitions);
+                        if (contentItem != null)
+                        {
+                            contentItems.Add(contentItem);
+                        }
                     }
                 }
             }
         }
 
         /// <summary>
-        /// False if the path would not match any patterns.
+        /// Get the root folder of the path.
         /// </summary>
-        private static bool IsValidAsset(string path)
+        private static string GetFolder(string path)
         {
-            // Verify that the file is not in the root. All patterns are for sub directories.
             for (var i = 1; i < path.Length; i++)
             {
                 if (path[i] == '/')
                 {
-                    return true;
+                    return path.Substring(0, i);
                 }
             }
 
-            return false;
+            return null;
         }
 
         private class GroupComparer : IEqualityComparer<ContentItem>
