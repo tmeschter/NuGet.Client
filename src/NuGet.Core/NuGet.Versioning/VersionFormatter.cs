@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -90,7 +90,7 @@ namespace NuGet.Versioning
         /// Create a normalized version string. This string is unique for each version 'identity' 
         /// and does not include leading zeros or metadata.
         /// </summary>
-        private static string GetNormalizedString(SemanticVersion version)
+        internal static string GetNormalizedString(SemanticVersion version)
         {
             var normalized = Format('V', version);
 
