@@ -149,7 +149,6 @@ namespace NuGet.ContentModel
                     foreach (var criteriaEntry in criteria.Entries)
                     {
                         ContentItemGroup bestGroup = null;
-                        var bestAmbiguity = false;
 
                         foreach (var itemGroup in itemGroups)
                         {
@@ -215,21 +214,12 @@ namespace NuGet.ContentModel
                                     if (groupComparison > 0)
                                     {
                                         bestGroup = itemGroup;
-                                        bestAmbiguity = false;
-                                    }
-                                    else if (groupComparison == 0)
-                                    {
-                                        bestAmbiguity = true;
                                     }
                                 }
                             }
                         }
                         if (bestGroup != null)
                         {
-                            if (bestAmbiguity)
-                            {
-                                // var x = 5;
-                            }
                             return bestGroup;
                         }
                     }
