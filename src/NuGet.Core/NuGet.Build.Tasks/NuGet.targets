@@ -177,7 +177,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <!--
     ============================================================
-    _FilterRestoreGraphProjectInputItems"
+    _FilterRestoreGraphProjectInputItems
     Filter out unsupported project entry points.
     ============================================================
   -->
