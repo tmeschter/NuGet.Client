@@ -34,6 +34,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
+    <BuildInParallel Condition="'$(BuildInParallel)' == ''">true</BuildInParallel>
     <!-- Mark that this target file has been loaded.  -->
     <IsRestoreTargetsFileLoaded>true</IsRestoreTargetsFileLoaded>
     <!-- Load NuGet.Build.Tasks.dll, this can be overridden to use a different version with $(RestoreTaskAssemblyFile) -->
@@ -225,6 +226,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Remove projects that do not support restore. -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Projects="@(FilteredRestoreGraphProjectInputItemsWithoutDuplicates)"
         Targets="_IsProjectRestoreSupported"
         ContinueOnError="$(RestoreContinueOnError)"
@@ -265,6 +267,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Process top level projects. -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Projects="@(_GenerateRestoreGraphProjectEntryInput)"
         Targets="_GenerateRestoreGraphProjectEntry"
         Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration);
@@ -279,6 +282,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Generate a spec for every project including dependencies. -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Projects="@(_RestoreProjectPathItems)"
         Targets="_GenerateProjectRestoreGraph"
         Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration);
@@ -459,6 +463,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Read additional sources and fallback folders for each framework  -->
     <MSBuild
+      BuildInParallel="$(BuildInParallel)"
       Condition=" '$(RestoreProjectStyle)' == 'PackageReference' "
       Projects="$(MSBuildProjectFullPath)"
       Targets="_GetRestoreSettingsPerFramework"
@@ -644,6 +649,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     <!-- Get project and package references  -->
     <!-- Evaluate for each framework -->
     <MSBuild
+      BuildInParallel="$(BuildInParallel)"
       Projects="$(MSBuildProjectFullPath)"
       Targets="_GenerateProjectRestoreGraphPerFramework"
       Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);
@@ -756,6 +762,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Get all project references for the current project  -->
     <MSBuild
+      BuildInParallel="$(BuildInParallel)"
       Projects="$(MSBuildProjectFullPath)"
       Targets="_GenerateRestoreProjectPathItemsPerFramework"
       ContinueOnError="$(RestoreContinueOnError)"
@@ -791,6 +798,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Walk project references  -->
     <MSBuild
+      BuildInParallel="$(BuildInParallel)"
       Projects="@(_CurrentRestoreProjectPathItems)"
       Targets="_GenerateRestoreProjectPathWalk"
       ContinueOnError="$(RestoreContinueOnError)"
@@ -832,6 +840,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Walk projects -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Projects="@(FilteredRestoreGraphProjectInputItems)"
         Targets="_GenerateRestoreProjectPathWalk"
         ContinueOnError="$(RestoreContinueOnError)"
@@ -855,6 +864,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Remove projects that do not support restore. -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Projects="@(_RestoreProjectPathItemsWithoutDupes)"
         Targets="_IsProjectRestoreSupported"
         ContinueOnError="$(RestoreContinueOnError)"
@@ -883,6 +893,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- RestorePackagesPathOverride -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Condition=" '$(RestorePackagesPath)' != '' "
         Projects="$(MSBuildThisFileFullPath)"
         Targets="_GetRestorePackagesPathOverride"
@@ -897,6 +908,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- RestoreSourcesOverride -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Condition=" '$(RestoreSources)' != '' "
         Projects="$(MSBuildThisFileFullPath)"
         Targets="_GetRestoreSourcesOverride"
@@ -911,6 +923,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- RestoreFallbackFoldersOverride -->
     <MsBuild
+        BuildInParallel="$(BuildInParallel)"
         Condition=" '$(RestoreFallbackFolders)' != '' "
         Projects="$(MSBuildThisFileFullPath)"
         Targets="_GetRestoreFallbackFoldersOverride"
