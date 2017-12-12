@@ -2,16 +2,14 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace NuGet.Packaging.Signing
 {
-    public static class SignedPackageArchiveIOUtility
+    internal static class SignedPackageArchiveIOUtility
     {
         internal const uint CentralDirectoryHeaderSignature = 0x02014b50;
         internal const uint EndOfCentralDirectorySignature = 0x06054b50;
@@ -31,11 +29,6 @@ namespace NuGet.Packaging.Signing
             if (reader == null)
             {
                 throw new ArgumentNullException(nameof(reader));
-            }
-
-            if (byteSignature == null || byteSignature.Length == 0)
-            {
-                throw new ArgumentException(Strings.ArgumentCannotBeNullOrEmpty, nameof(byteSignature));
             }
 
             var stream = reader.BaseStream;
@@ -70,11 +63,6 @@ namespace NuGet.Packaging.Signing
             if (reader == null)
             {
                 throw new ArgumentNullException(nameof(reader));
-            }
-
-            if (byteSignature == null || byteSignature.Length == 0)
-            {
-                throw new ArgumentException(Strings.ArgumentCannotBeNullOrEmpty, nameof(byteSignature));
             }
 
             var stream = reader.BaseStream;
@@ -139,15 +127,6 @@ namespace NuGet.Packaging.Signing
         /// <param name="bytes">Content to hash</param>
         public static void HashBytes(HashAlgorithm hashAlgorithm, byte[] bytes)
         {
-            if (hashAlgorithm == null)
-            {
-                throw new ArgumentNullException(nameof(hashAlgorithm));
-            }
-
-            if (bytes == null || bytes.Length == 0)
-            {
-                throw new ArgumentException(Strings.ArgumentCannotBeNullOrEmpty, nameof(bytes));
-            }
 #if IS_DESKTOP
             hashAlgorithm.TransformBlock(bytes, 0, bytes.Length, outputBuffer: null, outputOffset: 0);
 #else
@@ -160,64 +139,78 @@ namespace NuGet.Packaging.Signing
         /// </summary>
         /// <param name="reader">binary reader to zip archive</param>
         /// <returns>metadata with offsets and positions for entries</returns>
-        public static SignedPackageArchiveMetadata ReadSignedArchiveMetadata(BinaryReader reader)
+        internal static SignedPackageArchiveMetadata ReadSignedArchiveMetadata(BinaryReader reader)
         {
-            if (reader == null)
-            {
-                throw new ArgumentNullException(nameof(reader));
-            }
-
-            var metadata = new SignedPackageArchiveMetadata()
-            {
-                StartOfFileHeaders = reader.BaseStream.Length,
-            };
-            var centralDirectoryRecords = new List<CentralDirectoryHeaderMetadata>();
+            var metadata = new SignedPackageArchiveMetadata();
 
             // Look for EOCD signature, typically is around 22 bytes from the end
             reader.BaseStream.Seek(offset: -22, origin: SeekOrigin.End);
             SeekReaderBackwardToMatchByteSignature(reader, BitConverter.GetBytes(EndOfCentralDirectorySignature));
             metadata.EndOfCentralDirectoryRecordPosition = reader.BaseStream.Position;
 
-            // Jump to offset of start of central directory, 16 bytes from the start of EOCD (including signature length)
+            // Jump to offset of start of central directory
             reader.BaseStream.Seek(offset: 16, origin: SeekOrigin.Current);
-            metadata.StartOfCentralDirectory = reader.ReadUInt32();
-            reader.BaseStream.Seek(offset: metadata.StartOfCentralDirectory, origin: SeekOrigin.Begin);
+            var offsetOfStartOfCD = reader.ReadUInt32();
 
-            // Read central directory records
+            // Look for signature central directory record
+            reader.BaseStream.Seek(offset: offsetOfStartOfCD, origin: SeekOrigin.Begin);
             var possibleSignatureCentralDirectoryRecordPosition = reader.BaseStream.Position;
-            var isReadingCentralDirectoryRecords = true;
-            while (isReadingCentralDirectoryRecords)
+
+            var hasFoundSignatureEntry = false;
+            while (!hasFoundSignatureEntry)
             {
-                var centralDirectoryMetadata = new CentralDirectoryHeaderMetadata
-                {
-                    Position = possibleSignatureCentralDirectoryRecordPosition
-                };
                 var centralDirectoryHeaderSignature = reader.ReadUInt32();
                 if (centralDirectoryHeaderSignature != CentralDirectoryHeaderSignature)
                 {
                     throw new InvalidDataException(Strings.ErrorInvalidPackageArchive);
                 }
 
-                // Skip until file name length, 24 bytes after signature of central directory record (excluding signature length)
+                // Skip until file name length
                 reader.BaseStream.Seek(offset: 24, origin: SeekOrigin.Current);
                 var filenameLength = reader.ReadUInt16();
                 var extraFieldLength = reader.ReadUInt16();
                 var fileCommentLength = reader.ReadUInt16();
 
-                // Skip to read local header offset (8 bytes after file comment length field)
+                // Skip to read local header offset
                 reader.BaseStream.Seek(offset: 8, origin: SeekOrigin.Current);
 
-                centralDirectoryMetadata.OffsetToFileHeader = reader.ReadUInt32();
-
-                if (centralDirectoryMetadata.OffsetToFileHeader < metadata.StartOfFileHeaders)
-                {
-                    metadata.StartOfFileHeaders = centralDirectoryMetadata.OffsetToFileHeader;
-                }
+                var localHeaderOffset = reader.ReadUInt32();
 
                 var filename = reader.ReadBytes(filenameLength);
-                centralDirectoryMetadata.Filename = Encoding.ASCII.GetString(filename);
-                // Save total size of central directory record + variable length fields (46 bytes of fields and variable length fields afterwards)
-                centralDirectoryMetadata.HeaderSize = 46 + filenameLength + extraFieldLength + fileCommentLength;
+                var filenameString = Encoding.ASCII.GetString(filename);
+                if (string.Equals(filenameString, _signingSpecification.SignaturePath))
+                {
+                    hasFoundSignatureEntry = true;
+
+                    metadata.SignatureCentralDirectoryHeaderPosition = possibleSignatureCentralDirectoryRecordPosition;
+                    metadata.SignatureCentralDirectoryHeaderSize = 46 + filenameLength + extraFieldLength + fileCommentLength;
+
+                    metadata.SignatureLocalFileHeaderPosition = localHeaderOffset;
+
+                    // Go to local file header
+                    reader.BaseStream.Seek(offset: metadata.SignatureLocalFileHeaderPosition, origin: SeekOrigin.Begin);
+
+                    var fileHeaderSignature = reader.ReadUInt32();
+
+                    if (fileHeaderSignature != LocalFileHeaderSignature)
+                    {
+                        throw new InvalidDataException(Strings.ErrorInvalidPackageArchive);
+                    }
+
+                    // The total size of file entry is from the start of the file header until
+                    // the start of the next file header (or the start of the first central directory header)
+                    try
+                    {
+                        SeekReaderForwardToMatchByteSignature(reader, BitConverter.GetBytes(LocalFileHeaderSignature));
+                    }
+                    // No local File header found (the signature file must be the last entry), search for the start of the first central directory
+                    catch
+                    {
+                        SeekReaderForwardToMatchByteSignature(reader, BitConverter.GetBytes(CentralDirectoryHeaderSignature));
+                    }
+
+                    metadata.SignatureFileEntryTotalSize = reader.BaseStream.Position - metadata.SignatureLocalFileHeaderPosition;
+                }
 
                 try
                 {
@@ -226,19 +219,15 @@ namespace NuGet.Packaging.Signing
                 }
                 catch
                 {
-                    isReadingCentralDirectoryRecords = false;
+                    break;
                 }
-                centralDirectoryRecords.Add(centralDirectoryMetadata);
             }
 
-            var lastCentralDirectoryRecord = centralDirectoryRecords.Last();
-            metadata.EndOfCentralDirectory = lastCentralDirectoryRecord.Position + lastCentralDirectoryRecord.HeaderSize;
+            if (!hasFoundSignatureEntry)
+            {
+                throw new SignatureException(Strings.ErrorPackageNotSigned);
+            }
 
-            // Update central directory records with missing information
-            UpdateCentralDirectoryRecordsMetadata(reader, metadata, centralDirectoryRecords);
-            metadata.CentralDirectoryHeaders = centralDirectoryRecords;
-
-            // Make sure the package is not zip64
             var isZip64 = false;
             try
             {
@@ -256,57 +245,6 @@ namespace NuGet.Packaging.Signing
             return metadata;
         }
 
-        private static void UpdateCentralDirectoryRecordsMetadata(BinaryReader reader, SignedPackageArchiveMetadata metadata, List<CentralDirectoryHeaderMetadata> centralDirectoryRecords)
-        {
-            // Get missing metadata for central directory records
-            var hasFoundSignature = false;
-            var centralDirectoryRecordsCount = centralDirectoryRecords.Count;
-            for (var centralDirectoryRecordIndex = 0; centralDirectoryRecordIndex < centralDirectoryRecordsCount; centralDirectoryRecordIndex++)
-            {
-                var record = centralDirectoryRecords[centralDirectoryRecordIndex];
-
-                if (StringComparer.Ordinal.Equals(record.Filename, _signingSpecification.SignaturePath))
-                {
-                    if (hasFoundSignature)
-                    {
-                        throw new SignatureException(Strings.Error_NotOnePrimarySignature);
-                    }
-                    metadata.SignatureCentralDirectoryHeaderIndex = centralDirectoryRecordIndex;
-                    hasFoundSignature = true;
-                }
-
-                // Go to local file header
-                reader.BaseStream.Seek(offset: record.OffsetToFileHeader, origin: SeekOrigin.Begin);
-
-                // Validate file header signature
-                var fileHeaderSignature = reader.ReadUInt32();
-                if (fileHeaderSignature != LocalFileHeaderSignature)
-                {
-                    throw new InvalidDataException(Strings.ErrorInvalidPackageArchive);
-                }
-
-                // The total size of file entry is from the start of the file header until
-                // the start of the next file header (or the start of the first central directory header)
-                try
-                {
-                    SeekReaderForwardToMatchByteSignature(reader, BitConverter.GetBytes(LocalFileHeaderSignature));
-                }
-                // No local File header found (entry must be the last entry), search for the start of the first central directory
-                catch
-                {
-                    SeekReaderForwardToMatchByteSignature(reader, BitConverter.GetBytes(CentralDirectoryHeaderSignature));
-                }
-
-                record.IndexInHeaders = centralDirectoryRecordIndex;
-                record.FileEntryTotalSize = reader.BaseStream.Position - record.OffsetToFileHeader;
-            }
-
-            if (!hasFoundSignature)
-            {
-                throw new SignatureException(Strings.Error_NotOnePrimarySignature);
-            }
-        }
-
         private static bool CurrentStreamPositionMatchesByteSignature(BinaryReader reader, byte[] byteSignature)
         {
             if (reader == null)
@@ -316,7 +254,7 @@ namespace NuGet.Packaging.Signing
 
             if (byteSignature == null || byteSignature.Length == 0)
             {
-                throw new ArgumentException(Strings.ArgumentCannotBeNullOrEmpty, nameof(byteSignature));
+                throw new ArgumentNullException(nameof(byteSignature));
             }
 
             var stream = reader.BaseStream;
