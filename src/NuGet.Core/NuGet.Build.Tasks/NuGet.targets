@@ -34,7 +34,6 @@ Copyright (c) .NET Foundation. All rights reserved.
   -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <BuildInParallel Condition="'$(BuildInParallel)' == ''">true</BuildInParallel>
     <!-- Mark that this target file has been loaded.  -->
     <IsRestoreTargetsFileLoaded>true</IsRestoreTargetsFileLoaded>
     <!-- Load NuGet.Build.Tasks.dll, this can be overridden to use a different version with $(RestoreTaskAssemblyFile) -->
@@ -48,16 +47,15 @@ Copyright (c) .NET Foundation. All rights reserved.
     <ValidateRuntimeIdentifierCompatibility Condition=" '$(ValidateRuntimeIdentifierCompatibility)' == '' ">false</ValidateRuntimeIdentifierCompatibility>
     <!-- Error handling while walking projects -->
     <RestoreContinueOnError Condition=" '$(RestoreContinueOnError)' == '' ">WarnAndContinue</RestoreContinueOnError>
+    <!-- Build in parallel -->
+    <RestoreBuildInParallel Condition=" '$(BuildInParallel)' != '' ">$(BuildInParallel)</RestoreBuildInParallel>
+    <RestoreBuildInParallel Condition=" '$(RestoreBuildInParallel)' == '' ">true</RestoreBuildInParallel>
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Generate a restore graph for each entry point project. -->
-    <_GenerateRestoreGraphProjectEntryInputProperties>
-      RestoreUseCustomAfterTargets=$(RestoreUseCustomAfterTargets);
-      NuGetRestoreTargets=$(MSBuildThisFileFullPath);
-      BuildProjectReferences=false;
-      ExcludeRestorePackageImports=true;
-    </_GenerateRestoreGraphProjectEntryInputProperties>
+    <!-- Exclude packages from changing restore inputs. Avoid a double evaluation for direct project restore by only setting this if needed.  -->
+    <_GenerateRestoreGraphProjectEntryInputProperties></_GenerateRestoreGraphProjectEntryInputProperties>
+    <_GenerateRestoreGraphProjectEntryInputProperties Condition=" '$(RestoreSuccess)' != '' ">ExcludeRestorePackageImports=true</_GenerateRestoreGraphProjectEntryInputProperties>
 
     <!-- Standalone mode
          This is used by NuGet.exe to inject targets into the project that will be
@@ -66,6 +64,8 @@ Copyright (c) .NET Foundation. All rights reserved.
          skipped. -->
     <_GenerateRestoreGraphProjectEntryInputProperties Condition=" '$(RestoreUseCustomAfterTargets)' == 'true' ">
       $(_GenerateRestoreGraphProjectEntryInputProperties);
+      NuGetRestoreTargets=$(MSBuildThisFileFullPath);
+      RestoreUseCustomAfterTargets=$(RestoreUseCustomAfterTargets);
       CustomAfterMicrosoftCommonCrossTargetingTargets=$(MSBuildThisFileFullPath);
       CustomAfterMicrosoftCommonTargets=$(MSBuildThisFileFullPath);
     </_GenerateRestoreGraphProjectEntryInputProperties>
@@ -226,7 +226,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Remove projects that do not support restore. -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Projects="@(FilteredRestoreGraphProjectInputItemsWithoutDuplicates)"
         Targets="_IsProjectRestoreSupported"
         ContinueOnError="$(RestoreContinueOnError)"
@@ -265,9 +265,9 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_GenerateRestoreGraphProjectEntryInput Include="@(_RestoreProjectPathItems)" Condition=" '$(RestoreRecursive)' == 'true' " />
     </ItemGroup>
 
-    <!-- Process top level projects. -->
+    <!-- Add top level entries to the direct restore list. These projects will also restore tools. -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Projects="@(_GenerateRestoreGraphProjectEntryInput)"
         Targets="_GenerateRestoreGraphProjectEntry"
         Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration);
@@ -282,7 +282,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Generate a spec for every project including dependencies. -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Projects="@(_RestoreProjectPathItems)"
         Targets="_GenerateProjectRestoreGraph"
         Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration);
@@ -401,6 +401,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     _GetRestoreTargetFrameworksOutput
     Read target frameworks from the project.
+    Non-NETCore project frameworks will be returned.
     ============================================================
   -->
   <Target Name="_GetRestoreTargetFrameworksOutput"
@@ -433,37 +434,30 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!--
     ============================================================
-    _GetRestoreTargetFrameworksToEval
-    Read TargetFrameworks from the project as items.
+    _GetRestoreTargetFrameworksAsItems
+    Read $(TargetFrameworks) from the project as items.
+    Projects that do not have $(TargetFrameworks) will noop.
     ============================================================
   -->
-  <Target Name="_GetRestoreTargetFrameworksToEval"
+  <Target Name="_GetRestoreTargetFrameworksAsItems"
     DependsOnTargets="_GetRestoreProjectStyle"
-    Returns="@(_RestoreTargetFrameworksToEval)">
+    Returns="@(_RestoreTargetFrameworkItems)">
 
-    <ItemGroup Condition=" '$(TargetFrameworks)' != '' ">
-      <_RestoreTargetFrameworksToEval Include="$(TargetFrameworks.Split(';'))" />
-    </ItemGroup>
+    
   </Target>
 
   <!--
     ============================================================
     _GetRestoreTargetFrameworksAsItems
-    Get the set of $(TargetFramework) and $(TargetFrameworks)
-    values that should be used for inner builds.
+    Read $(TargetFrameworks) from the project as items.
+    Projects that do not have $(TargetFrameworks) will noop.
     ============================================================
   -->
   <Target Name="_GetRestoreTargetFrameworksAsItems"
-    DependsOnTargets="_GetRestoreProjectStyle;_GetRestoreTargetFrameworksOutput"
+    DependsOnTargets="_GetRestoreProjectStyle"
     Returns="@(_RestoreTargetFrameworkItems)">
-
-    <PropertyGroup>
-      <_RestoreTargetFrameworkItemsHasValues Condition=" '$(TargetFramework)' != '' OR '$(TargetFrameworks)' != '' ">true</_RestoreTargetFrameworkItemsHasValues>
-    </PropertyGroup>
-
-    <!-- Only return values for NETCore PackageReference projects -->
-    <ItemGroup Condition=" '$(RestoreProjectStyle)' == 'PackageReference' AND '$(_RestoreTargetFrameworkItemsHasValues)' == 'true' ">
-      <_RestoreTargetFrameworkItems Include="@(_RestoreTargetFrameworksOutputFiltered)" />
+    <ItemGroup Condition=" '$(TargetFrameworks)' != '' ">
+      <_RestoreTargetFrameworkItems Include="$(TargetFrameworks.Split(';'))" />
     </ItemGroup>
   </Target>
 
@@ -525,15 +519,15 @@ Copyright (c) .NET Foundation. All rights reserved.
   -->
   <Target Name="_GetRestoreSettingsAllFrameworks"
     Condition=" '$(TargetFrameworks)' != '' AND '$(RestoreProjectStyle)' == 'PackageReference' "
-    DependsOnTargets="_GetRestoreTargetFrameworksToEval;_GetRestoreProjectStyle"
+    DependsOnTargets="_GetRestoreTargetFrameworksAsItems;_GetRestoreProjectStyle"
     Returns="@(_RestoreSettingsPerFramework)">
 
     <!-- Read additional sources and fallback folders for each framework  -->
     <MSBuild
-      BuildInParallel="$(BuildInParallel)"
+      BuildInParallel="$(RestoreBuildInParallel)"
       Projects="$(MSBuildProjectFullPath)"
       Targets="_GetRestoreSettingsPerFramework"
-      Properties="TargetFramework=%(_RestoreTargetFrameworksToEval.Identity);
+      Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);
                   %(_MSBuildProjectReferenceExistent.SetConfiguration);
                   %(_MSBuildProjectReferenceExistent.SetPlatform);
                   $(_GenerateRestoreGraphProjectEntryInputProperties)"
@@ -711,16 +705,16 @@ Copyright (c) .NET Foundation. All rights reserved.
   -->
   <Target Name="_GenerateProjectRestoreGraphAllFrameworks"
     Condition=" '$(TargetFrameworks)' != '' "
-    DependsOnTargets="_GetRestoreTargetFrameworksToEval"
+    DependsOnTargets="_GetRestoreTargetFrameworksAsItems"
     Returns="@(_RestoreGraphEntry)">
 
       <!-- Get project and package references  -->
     <!-- Evaluate for each framework -->
     <MSBuild
-      BuildInParallel="$(BuildInParallel)"
+      BuildInParallel="$(RestoreBuildInParallel)"
       Projects="$(MSBuildProjectFullPath)"
       Targets="_GenerateProjectRestoreGraphPerFramework"
-      Properties="TargetFramework=%(_RestoreTargetFrameworksToEval.Identity);
+      Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);
                   %(_MSBuildProjectReferenceExistent.SetConfiguration);
                   %(_MSBuildProjectReferenceExistent.SetPlatform);
                   $(_GenerateRestoreGraphProjectEntryInputProperties)"
@@ -861,16 +855,16 @@ Copyright (c) .NET Foundation. All rights reserved.
   -->
   <Target Name="_GenerateRestoreProjectPathItemsWithFrameworks"
     Condition=" '$(TargetFrameworks)' != '' "
-    DependsOnTargets="_GetRestoreTargetFrameworksToEval"
+    DependsOnTargets="_GetRestoreTargetFrameworksAsItems"
     Returns="@(_RestoreProjectPathItems)">
 
     <!-- Get all project references for the current project  -->
     <MSBuild
-      BuildInParallel="$(BuildInParallel)"
+      BuildInParallel="$(RestoreBuildInParallel)"
       Projects="$(MSBuildProjectFullPath)"
       Targets="_GenerateRestoreProjectPathItemsPerFramework"
       ContinueOnError="$(RestoreContinueOnError)"
-      Properties="TargetFramework=%(_RestoreTargetFrameworksToEval.Identity);
+      Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);
                   %(_MSBuildProjectReferenceExistent.SetConfiguration);
                   %(_MSBuildProjectReferenceExistent.SetPlatform);
                   $(_GenerateRestoreGraphProjectEntryInputProperties)"
@@ -894,7 +888,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Walk project references  -->
     <MSBuild
-      BuildInParallel="$(BuildInParallel)"
+      BuildInParallel="$(RestoreBuildInParallel)"
       Projects="@(_CurrentRestoreProjectPathItems)"
       Targets="_GenerateRestoreProjectPathWalk"
       ContinueOnError="$(RestoreContinueOnError)"
@@ -935,7 +929,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Walk projects -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Projects="@(FilteredRestoreGraphProjectInputItems)"
         Targets="_GenerateRestoreProjectPathWalk"
         ContinueOnError="$(RestoreContinueOnError)"
@@ -959,7 +953,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Remove projects that do not support restore. -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Projects="@(_RestoreProjectPathItemsWithoutDupes)"
         Targets="_IsProjectRestoreSupported"
         ContinueOnError="$(RestoreContinueOnError)"
@@ -988,7 +982,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- RestorePackagesPathOverride -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Condition=" '$(RestorePackagesPath)' != '' "
         Projects="$(MSBuildThisFileFullPath)"
         Targets="_GetRestorePackagesPathOverride"
@@ -1003,7 +997,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- RestoreSourcesOverride -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Condition=" '$(RestoreSources)' != '' "
         Projects="$(MSBuildThisFileFullPath)"
         Targets="_GetRestoreSourcesOverride"
@@ -1018,7 +1012,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- RestoreFallbackFoldersOverride -->
     <MsBuild
-        BuildInParallel="$(BuildInParallel)"
+        BuildInParallel="$(RestoreBuildInParallel)"
         Condition=" '$(RestoreFallbackFolders)' != '' "
         Projects="$(MSBuildThisFileFullPath)"
         Targets="_GetRestoreFallbackFoldersOverride"
