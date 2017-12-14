@@ -195,11 +195,14 @@
 
   <Target Name="GetBuildOutputWithLocMetadata" DependsOnTargets="BuiltProjectOutputGroup" Returns="@(DllsToLocalizeWithMetadata)">
     <ItemGroup>
-      <DllsToLocalizeWithMetadata Include="@(BuiltProjectOutputGroupOutput->'%(FinalOutputPath)')" Condition="'%(Extension)' == '.dll' OR '%(Filename)' == 'NuGet.CommandLine.XPlat'" KeepDuplicates="false">
-        <TranslationFile>$(LocalizationRootDirectory)\{Lang}\15\%(Filename).dll.lcl</TranslationFile>    <!--Required: translation file-->
-	      <LciCommentFile>$(LocalizationRootDirectory)\comments\15\%(Filename).dll.lci</LciCommentFile>
+      <DllsToLocalizeWithMetadata Include="@(BuiltProjectOutputGroupOutput->'%(FinalOutputPath)')" Condition="'%(Extension)' == '.dll' OR '%(Filename)' == 'NuGet.CommandLine.XPlat' OR '%(Filename)%(Extension)' == 'NuGet.exe'" KeepDuplicates="false">
+        <TranslationFile>$(LocalizationRootDirectory)\{Lang}\15\%(Filename)%(Extension).lcl</TranslationFile>    <!--Required: translation file-->
+	      <LciCommentFile>$(LocalizationRootDirectory)\comments\15\%(Filename)%(Extension).lci</LciCommentFile>
       </DllsToLocalizeWithMetadata>
     </ItemGroup>
+    <Message Text="Path - @(BuiltProjectOutputGroupOutput)" Importance="high" />
+    <Message Text="Path - @(FinalOutputPath)" Importance="high" />
+    <Message Text="Files - @(DllsToLocalizeWithMetadata)" Importance="high" />
   </Target>
 
   <!--
