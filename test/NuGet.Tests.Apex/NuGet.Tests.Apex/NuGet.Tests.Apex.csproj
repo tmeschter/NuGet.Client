@@ -32,6 +32,7 @@
     <Compile Include="Fixtures\VisualStudioOperationsFixture.cs" />
     <Compile Include="NuGetIVsApiTests\IVsPackageInstallerTestCase.cs" />
     <Compile Include="NuGetIVsApiTests\NuGetConsoleTestCase.cs" />
+    <Compile Include="NuGetIVsApiTests\NetCoreProjectTestCase.cs" />
     <Compile Include="NuGetIVsApiTests\NuGetUITestCase.cs" />
     <Compile Include="Apex\NuGetTypeConstraint.cs" />
     <Compile Include="Apex\NuGetUIProjectTestExtensionVerifier.cs" />
