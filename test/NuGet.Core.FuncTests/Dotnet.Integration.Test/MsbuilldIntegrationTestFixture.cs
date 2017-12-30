@@ -132,19 +132,29 @@ namespace Dotnet.Integration.Test
 
         internal CommandRunnerResult RestoreToolProject(string workingDirectory, string projectName, string args)
         {
+
+            var envVar = new Dictionary<string, string>();
+            envVar.Add("MSBuildSDKsPath", MsBuildSdksPath);
+
             var result = CommandRunner.Run(TestDotnetCli,
                 workingDirectory,
                 $"restore {projectName}.csproj {args}",
-                waitForExit: true);
+                waitForExit: true,
+                environmentVariables: envVar);
             return result;
         }
 
         internal void RestoreProject(string workingDirectory, string projectName, string args)
         {
+            var envVar = new Dictionary<string, string>();
+            envVar.Add("MSBuildSDKsPath", MsBuildSdksPath);
+
             var result = CommandRunner.Run(TestDotnetCli,
                 workingDirectory,
                 $"restore {projectName}.csproj {args}",
-                waitForExit: true);
+                waitForExit: true,
+                environmentVariables: envVar);
+
             Assert.True(result.Item1 == 0, $"Restore failed with following log information :\n {result.AllOutput}");
             Assert.True(result.Item3 == "", $"Restore failed with following message in error stream :\n {result.AllOutput}");
         }
@@ -236,6 +246,35 @@ namespace Dotnet.Integration.Test
                     CopyFlatlistOfFilesToTarget(nupkg, pathToSdkInCli, files);
                 }
             }
+<<<<<<< HEAD
+=======
+
+            //var pathToNetCoreSDKinCLINetCore = Path.Combine(pathToSdkInCli, "Sdks", "Microsoft.NET.Sdk", "tools", "netcoreapp1.0");
+            //foreach (var nupkgName in nupkgsToCopy)
+            //{
+            //    using (var nupkg = new PackageArchiveReader(FindMostRecentNupkg(nupkgsDirectory, nupkgName)))
+            //    {
+            //        var files = nupkg.GetFiles()
+            //        .Where(fileName => fileName.StartsWith("lib/netstandard")
+            //                        || fileName.Contains("NuGet.targets"));
+
+            //        CopyFlatlistOfFilesToTarget(nupkg, pathToNetCoreSDKinCLINetCore, files);
+            //    }
+            //}
+
+            //var pathToNetCoreSDKinCLINet46 = Path.Combine(pathToSdkInCli, "Sdks", "Microsoft.NET.Sdk", "tools", "net46");
+            //foreach (var nupkgName in nupkgsToCopy)
+            //{
+            //    using (var nupkg = new PackageArchiveReader(FindMostRecentNupkg(nupkgsDirectory, nupkgName)))
+            //    {
+            //        var files = nupkg.GetFiles()
+            //        .Where(fileName => fileName.StartsWith("net46")
+            //                        || fileName.Contains("NuGet.targets"));
+
+            //        CopyFlatlistOfFilesToTarget(nupkg, pathToNetCoreSDKinCLINet46, files);
+            //    }
+            //}
+>>>>>>> add more tests, including 3 failing ones
         }
 
         private void CopyFlatlistOfFilesToTarget(PackageArchiveReader nupkg, string destination, IEnumerable<string> packageFiles)
