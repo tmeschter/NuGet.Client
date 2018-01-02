@@ -22,7 +22,7 @@ namespace Dotnet.Integration.Test
         private readonly string _dotnetCli = DotnetCliUtil.GetDotnetCli();
         internal readonly string TestDotnetCli;
         internal readonly string MsBuildSdksPath;
-
+        
         public MsbuildIntegrationTestFixture()
         {
             var cliDirectory = CopyLatestCliForPack();
@@ -247,6 +247,7 @@ namespace Dotnet.Integration.Test
                 }
             }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
             //var pathToNetCoreSDKinCLINetCore = Path.Combine(pathToSdkInCli, "Sdks", "Microsoft.NET.Sdk", "tools", "netcoreapp1.0");
@@ -275,6 +276,8 @@ namespace Dotnet.Integration.Test
             //    }
             //}
 >>>>>>> add more tests, including 3 failing ones
+=======
+>>>>>>> collect all files in the tools group
         }
 
         private void CopyFlatlistOfFilesToTarget(PackageArchiveReader nupkg, string destination, IEnumerable<string> packageFiles)
