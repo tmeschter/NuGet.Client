@@ -232,38 +232,6 @@ namespace Dotnet.Integration.Test
                     CopyFlatlistOfFilesToTarget(nupkg, pathToSdkInCli, files);
                 }
             }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
-            //var pathToNetCoreSDKinCLINetCore = Path.Combine(pathToSdkInCli, "Sdks", "Microsoft.NET.Sdk", "tools", "netcoreapp1.0");
-            //foreach (var nupkgName in nupkgsToCopy)
-            //{
-            //    using (var nupkg = new PackageArchiveReader(FindMostRecentNupkg(nupkgsDirectory, nupkgName)))
-            //    {
-            //        var files = nupkg.GetFiles()
-            //        .Where(fileName => fileName.StartsWith("lib/netstandard")
-            //                        || fileName.Contains("NuGet.targets"));
-
-            //        CopyFlatlistOfFilesToTarget(nupkg, pathToNetCoreSDKinCLINetCore, files);
-            //    }
-            //}
-
-            //var pathToNetCoreSDKinCLINet46 = Path.Combine(pathToSdkInCli, "Sdks", "Microsoft.NET.Sdk", "tools", "net46");
-            //foreach (var nupkgName in nupkgsToCopy)
-            //{
-            //    using (var nupkg = new PackageArchiveReader(FindMostRecentNupkg(nupkgsDirectory, nupkgName)))
-            //    {
-            //        var files = nupkg.GetFiles()
-            //        .Where(fileName => fileName.StartsWith("net46")
-            //                        || fileName.Contains("NuGet.targets"));
-
-            //        CopyFlatlistOfFilesToTarget(nupkg, pathToNetCoreSDKinCLINet46, files);
-            //    }
-            //}
->>>>>>> add more tests, including 3 failing ones
-=======
->>>>>>> collect all files in the tools group
         }
 
         private void CopyFlatlistOfFilesToTarget(PackageArchiveReader nupkg, string destination, IEnumerable<string> packageFiles)
@@ -351,19 +319,12 @@ namespace Dotnet.Integration.Test
 
         private static void KillDotnetExe(string pathToDotnetExe)
         {
-<<<<<<< HEAD
 
             var processes = Process.GetProcessesByName("dotnet")
                 .Where(t => string.Compare(t.MainModule.FileName, Path.GetFullPath(pathToDotnetExe), ignoreCase: true) == 0);
             var testDirProcesses = Process.GetProcesses()
                 .Where(t => t.MainModule.FileName.StartsWith(TestFileSystemUtility.NuGetTestFolder, StringComparison.OrdinalIgnoreCase));
             try
-=======
-            var processes = Process.GetProcessesByName("dotnet");
-            var testDirProcesses = Process.GetProcesses().Where(t => t.MainModule.FileName.StartsWith(TestFileSystemUtility.NuGetTestFolder));
-            
-            if(processes != null && processes.Length >=1)
->>>>>>> kill processes in the test directory
             {
                 if (processes != null)
                 {
