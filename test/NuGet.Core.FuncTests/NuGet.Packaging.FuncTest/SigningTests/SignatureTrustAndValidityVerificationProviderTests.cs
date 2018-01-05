@@ -15,8 +15,6 @@ using FluentAssertions;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
 using NuGet.Test.Utility;
-using Org.BouncyCastle.Cms;
-using Org.BouncyCastle.X509.Store;
 using Test.Utility.Signing;
 using Xunit;
 
@@ -100,7 +98,7 @@ namespace NuGet.Packaging.FuncTest
                 using (var packageReader = new PackageArchiveReader(packageFilePath))
                 {
                     var signature = (await packageReader.GetSignaturesAsync(CancellationToken.None)).Single();
-                    var invalidSignature = GenerateInvalidSignature(signature);
+                    var invalidSignature = SignedArchiveTestUtility.GenerateInvalidSignature(signature);
                     var provider = new SignatureTrustAndValidityVerificationProvider();
 
                     var result = await provider.GetTrustResultAsync(
@@ -117,50 +115,34 @@ namespace NuGet.Packaging.FuncTest
             }
         }
 
-        private static Signature GenerateInvalidSignature(Signature signature)
+        [CIOnlyFact]
+        public async Task GetTrustResultAsync_WithNoSigningCertificate_Throws()
         {
-            var hash = Encoding.UTF8.GetBytes(signature.SignatureContent.HashValue);
-            var newHash = Encoding.UTF8.GetBytes(new string('0', hash.Length));
+            var package = new SimpleTestPackageContext();
 
-            var bytes = signature.SignedCms.Encode();
-            var newBytes = FindAndReplaceSequence(bytes, hash, newHash);
-
-            return Signature.Load(newBytes);
-        }
-
-        private static byte[] FindAndReplaceSequence(byte[] bytes, byte[] find, byte[] replace)
-        {
-            var found = false;
-            var from = -1;
-
-            for (var i = 0; !found && i < bytes.Length - find.Length; ++i)
+            using (var directory = TestDirectory.Create())
+            using (var testCertificate = new X509Certificate2(_trustedTestCert.Source.Cert))
             {
-                for (var j = 0; j < find.Length; ++j)
-                {
-                    if (bytes[i + j] != find[j])
-                    {
-                        break;
-                    }
+                var packageFilePath = await SignedArchiveTestUtility.CreateSignedAndTimeStampedPackageAsync(testCertificate, package, directory);
 
-                    if (j == find.Length - 1)
-                    {
-                        from = i;
-                        found = true;
-                    }
+                using (var packageReader = new PackageArchiveReader(packageFilePath))
+                {
+                    var signature = (await packageReader.GetSignaturesAsync(CancellationToken.None)).Single();
+                    var signatureWithNoCertificates = SignedArchiveTestUtility.GenerateSignatureWithNoCertificates(signature);
+                    var provider = new SignatureTrustAndValidityVerificationProvider();
+
+                    var result = await provider.GetTrustResultAsync(
+                        packageReader,
+                        signatureWithNoCertificates,
+                        SignedPackageVerifierSettings.Default,
+                        CancellationToken.None);
+
+                    var issue = result.Issues.FirstOrDefault(log => log.Code == NuGetLogCode.NU3010);
+
+                    Assert.NotNull(issue);
+                    Assert.Equal("The primary signature does not have a signing certificate.", issue.Message);
                 }
             }
-
-            if (!found)
-            {
-                throw new Exception("Byte sequence not found.");
-            }
-
-            var byteList = new List<byte>(bytes);
-
-            byteList.RemoveRange(from, find.Length);
-            byteList.InsertRange(from, replace);
-
-            return byteList.ToArray();
         }
     }
 }
