@@ -157,7 +157,7 @@ namespace NuGet.Client.Test
         }
 
         [Fact]
-        public void ContentModel_ToolsAnyMapsToDotnet() // TODO NK - Is this normal? Can we prevent this?
+        public void ContentModel_ToolsAnyMapsToDotnet()
         {
             // Arrange
             var conventions = new ManagedCodeConventions(

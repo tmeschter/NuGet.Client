@@ -90,7 +90,7 @@ namespace NuGet.Client.Test
             // Arrange
             var conventions = new ManagedCodeConventions(
                 new RuntimeGraph(
-                    new List<CompatibilityProfile>() { new CompatibilityProfile("net46.app") })); // TODO NK - Testing on a compat profile with no framework runtime pair does not test jack shit does it?
+                    new List<CompatibilityProfile>() { new CompatibilityProfile("net46.app") }));
 
             var collection = new ContentItemCollection();
             var rid = "any";
@@ -110,7 +110,7 @@ namespace NuGet.Client.Test
         }
 
         [Fact]
-        public void ContentModel_GetNearestRIDAndTFM() // TODO NK - how to make sure that Any maps to any TFM. 
+        public void ContentModel_GetNearestRIDAndTFM()
         {
             // Arrange
             var runtimes = new List<RuntimeDescription>()
