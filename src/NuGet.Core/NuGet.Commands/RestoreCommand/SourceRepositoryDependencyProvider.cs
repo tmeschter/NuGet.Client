@@ -545,5 +545,39 @@ namespace NuGet.Commands
 
             return packageVersions;
         }
+
+        public async Task<bool> GetDevelopmentDependencyAsync(
+            LibraryIdentity libraryIdentity,
+             SourceCacheContext cacheContext,
+            ILogger logger,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (_throttle != null)
+                {
+                    await _throttle.WaitAsync();
+                }
+
+                return await _findPackagesByIdResource.GetDevelopmentDependencyAsync(
+                    libraryIdentity.Name,
+                    libraryIdentity.Version,
+                    cacheContext,
+                    logger,
+                    cancellationToken);
+            }
+            catch (FatalProtocolException e) when (_ignoreFailedSources)
+            {
+                if (!_ignoreWarning)
+                {
+                    await _logger.LogAsync(RestoreLogMessage.CreateWarning(NuGetLogCode.NU1801, e.Message, libraryIdentity.Name));
+                }
+                return false;
+            }
+            finally
+            {
+                _throttle?.Release();
+            }
+        }
     }
 }

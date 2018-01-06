@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -98,6 +98,8 @@ namespace NuGet.DependencyResolver
         {
             LibraryDependencyInfo dependencies;
 
+            var developmentDependencyFlag = false;
+
             // For local matches such as projects get the dependencies from the LocalLibrary property.
             var localMatch = match as LocalMatch;
 
@@ -114,6 +116,12 @@ namespace NuGet.DependencyResolver
                 dependencies = await match.Provider.GetDependenciesAsync(
                     match.Library,
                     framework,
+                    cacheContext,
+                    logger,
+                    cancellationToken);
+
+                developmentDependencyFlag = await match.Provider.GetDevelopmentDependencyAsync(
+                    match.Library,
                     cacheContext,
                     logger,
                     cancellationToken);

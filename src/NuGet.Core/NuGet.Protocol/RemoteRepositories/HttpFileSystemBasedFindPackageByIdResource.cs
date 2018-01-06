@@ -116,6 +116,53 @@ namespace NuGet.Protocol
             return packageInfos.Keys;
         }
 
+        public override async Task<bool> GetDevelopmentDependencyAsync(
+            string id,
+            NuGetVersion version,
+            SourceCacheContext cacheContext,
+            ILogger logger,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentException(Strings.ArgumentCannotBeNullOrEmpty, nameof(id));
+            }
+
+            if (version == null)
+            {
+                throw new ArgumentNullException(nameof(version));
+            }
+
+            if (cacheContext == null)
+            {
+                throw new ArgumentNullException(nameof(cacheContext));
+            }
+
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var packageInfos = await EnsurePackagesAsync(id, cacheContext, logger, cancellationToken);
+
+            PackageInfo packageInfo;
+            if (packageInfos.TryGetValue(version, out packageInfo))
+            {
+                var reader = await _nupkgDownloader.GetNuspecReaderFromNupkgAsync(
+                    packageInfo.Identity,
+                    packageInfo.ContentUri,
+                    cacheContext,
+                    logger,
+                    cancellationToken);
+
+                return GetDevelopmentDependency(reader);
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Asynchronously gets dependency information for a specific package.
         /// </summary>

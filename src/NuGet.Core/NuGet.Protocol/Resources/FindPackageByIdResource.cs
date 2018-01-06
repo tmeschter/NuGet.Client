@@ -113,6 +113,13 @@ namespace NuGet.Protocol.Core.Types
             ILogger logger,
             CancellationToken cancellationToken);
 
+        public abstract Task<bool> GetDevelopmentDependencyAsync(
+            string id,
+            NuGetVersion version,
+            SourceCacheContext cacheContext,
+            ILogger logger,
+            CancellationToken cancellationToken);
+
         /// <summary>
         /// Read dependency info from a nuspec.
         /// </summary>
@@ -128,6 +135,15 @@ namespace NuGet.Protocol.Core.Types
                 reader.GetIdentity(),
                 reader.GetDependencyGroups(),
                 reader.GetFrameworkReferenceGroups());
+        }
+
+        protected static bool GetDevelopmentDependency(NuspecReader reader)
+        {
+            // Since this is the first place a package is read after selecting it as the best version
+            // check the minClientVersion here to verify we are okay to read this package.
+            MinClientVersionUtility.VerifyMinClientVersion(reader);
+
+            return reader.GetDevelopmentDependency();
         }
     }
 }

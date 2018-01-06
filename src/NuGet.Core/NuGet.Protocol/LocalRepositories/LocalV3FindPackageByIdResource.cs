@@ -114,6 +114,46 @@ namespace NuGet.Protocol
             return Task.FromResult<IEnumerable<NuGetVersion>>(GetVersions(id, cacheContext, logger));
         }
 
+        public override Task<bool> GetDevelopmentDependencyAsync(
+            string id,
+            NuGetVersion version,
+            SourceCacheContext cacheContext,
+            ILogger logger,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentException(Strings.ArgumentCannotBeNullOrEmpty, nameof(id));
+            }
+
+            if (version == null)
+            {
+                throw new ArgumentNullException(nameof(version));
+            }
+
+            if (cacheContext == null)
+            {
+                throw new ArgumentNullException(nameof(cacheContext));
+            }
+
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var developmnentDependencyFlag = ProcessNuspecReader(
+                id,
+                version,
+                nuspecReader =>
+                {
+                    return GetDevelopmentDependency(nuspecReader);
+                });
+
+            return Task.FromResult(developmnentDependencyFlag);
+        }
+
         /// <summary>
         /// Asynchronously copies a .nupkg to a stream.
         /// </summary>

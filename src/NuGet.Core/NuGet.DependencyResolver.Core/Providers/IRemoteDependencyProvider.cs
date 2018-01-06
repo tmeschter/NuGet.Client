@@ -117,5 +117,11 @@ namespace NuGet.DependencyResolver
             SourceCacheContext cacheContext,
             ILogger logger,
             CancellationToken token);
+
+        Task<bool> GetDevelopmentDependencyAsync(
+            LibraryIdentity libraryIdentity,
+             SourceCacheContext cacheContext,
+            ILogger logger,
+            CancellationToken cancellationToken);
     }
 }
