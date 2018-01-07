@@ -5,6 +5,7 @@ using System;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio.Shell;
 
 // Project-specific attributes
 
@@ -15,3 +16,4 @@ using System.Runtime.InteropServices;
 
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
+[assembly: ProvideCodeBase(AssemblyName = "{AssemblyName}", Version = "{AssemblyVersion}", CodeBase = "$PackageFolder$\\{AssemblyFile}")]

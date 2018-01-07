@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Markup;
+using Microsoft.VisualStudio.Shell;
 
 
 #if SIGNED_BUILD
@@ -25,3 +26,4 @@ using System.Windows.Markup;
 [assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
 [assembly: XmlnsPrefix("http://schemas.nuget.org/xaml", "nuget")]
 [assembly: XmlnsDefinition("http://schemas.nuget.org/xaml", "NuGet.PackageManagement.UI")]
+[assembly: ProvideCodeBase(AssemblyName = "{AssemblyName}", Version = "{AssemblyVersion}", CodeBase = "$PackageFolder$\\{AssemblyFile}")]

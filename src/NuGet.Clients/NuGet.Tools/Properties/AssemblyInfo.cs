@@ -3,7 +3,10 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio.Shell;
 
 [assembly: AssemblyTitle("NuGet.Tools")]
 [assembly: AssemblyDescription("Visual Studio Extensibility Package (vsix)")]
 [assembly: ComVisible(false)]
+[assembly: ProvideCodeBase(AssemblyName = "{AssemblyName}", Version = "{AssemblyVersion}", CodeBase = "$PackageFolder$\\{AssemblyFile}")]
+

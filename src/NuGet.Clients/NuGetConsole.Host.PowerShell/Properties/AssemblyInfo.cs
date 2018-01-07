@@ -4,6 +4,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio.Shell;
 
 [assembly: AssemblyTitle("PowerConsolePowerShellHost")]
 [assembly: AssemblyDescription("PowerConsole PowerShell host implementation")]
@@ -31,3 +32,4 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("d2b73aac-236b-4676-9522-c487b838c1de")]
 [assembly: ComVisible(false)]
+[assembly: ProvideCodeBase(AssemblyName = "{AssemblyName}", Version = "{AssemblyVersion}", CodeBase = "$PackageFolder$\\{AssemblyFile}")]
