@@ -183,9 +183,24 @@ namespace NuGet.DependencyResolver
                 // Extract the resolved node
                 tasks.Remove(task);
                 var dependencyNode = await task;
-                dependencyNode.OuterNode = node;
 
-                node.InnerNodes.Add(dependencyNode);
+                var ddFlag = false;
+                if (dependencyNode.Item.Data.DevelopmentDependency)
+                {
+                    var dependency = node.Item.Data.Dependencies.First(d => d.LibraryRange.Name.Equals(dependencyNode.Item.Data.Match.Library.Name, StringComparison.OrdinalIgnoreCase));
+
+                    if (dependency.SuppressParent == LibraryIncludeFlagUtils.DefaultSuppressParent)
+                    {
+                        ddFlag = true;
+                        dependency.SuppressParent = LibraryIncludeFlags.All;
+                    }
+                }
+
+                if (!ddFlag || outerEdge == null)
+                {
+                    dependencyNode.OuterNode = node;
+                    node.InnerNodes.Add(dependencyNode);
+                }
             }
 
             return node;

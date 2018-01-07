@@ -137,7 +137,8 @@ namespace NuGet.DependencyResolver
                 Data = new RemoteResolveResult
                 {
                     Match = match,
-                    Dependencies = dependencies.Dependencies
+                    Dependencies = dependencies.Dependencies,
+                    DevelopmentDependency = developmentDependencyFlag
                 },
             };
         }

@@ -832,6 +832,15 @@ namespace NuGet.DependencyResolver.Tests
 
             public PackageSource Source => new PackageSource("Test");
 
+            public Task<bool> GetDevelopmentDependencyAsync(
+                LibraryIdentity libraryIdentity,
+                 SourceCacheContext cacheContext,
+                ILogger logger,
+                CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
             public Task<IPackageDownloader> GetPackageDownloaderAsync(
                 PackageIdentity packageIdentity,
                 SourceCacheContext cacheContext,

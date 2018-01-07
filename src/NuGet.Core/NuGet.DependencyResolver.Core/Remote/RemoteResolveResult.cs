@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
@@ -10,5 +10,7 @@ namespace NuGet.DependencyResolver
     {
         public RemoteMatch Match { get; set; }
         public IEnumerable<LibraryDependency> Dependencies { get; set; }
+
+        public bool DevelopmentDependency { get; set; }
     }
 }
