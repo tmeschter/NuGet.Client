@@ -275,11 +275,18 @@ namespace NuGet.PackageManagement.VisualStudio
                         originalFramework = framework.GetShortFolderName();
                     }
 
-                    await conditionalService.AddAsync(
+                    var reference = await conditionalService.AddAsync(
                         packageId,
                         formattedRange,
                         TargetFrameworkCondition,
                         originalFramework);
+
+                    if (installationContext.SuppressParent != LibraryIncludeFlagUtils.DefaultSuppressParent)
+                    {
+                        await reference.Metadata.SetPropertyValueAsync(
+                            ProjectItemProperties.PrivateAssets,
+                            LibraryIncludeFlagUtils.GetFlagString(installationContext.SuppressParent).Replace(',', ';'));
+                    }
                 }
             }
             else
@@ -297,6 +304,13 @@ namespace NuGet.PackageManagement.VisualStudio
                 {
                     var existingReference = result.Reference;
                     await existingReference.Metadata.SetPropertyValueAsync("Version", formattedRange);
+                }
+
+                if (installationContext.SuppressParent != LibraryIncludeFlagUtils.DefaultSuppressParent)
+                {
+                    await result.Reference.Metadata.SetPropertyValueAsync(
+                        ProjectItemProperties.PrivateAssets,
+                        LibraryIncludeFlagUtils.GetFlagString(installationContext.SuppressParent).Replace(',', ';'));
                 }
             }
 

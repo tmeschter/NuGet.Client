@@ -146,7 +146,8 @@ namespace NuGet.PackageManagement.VisualStudio
                 LibraryRange = new LibraryRange(
                     name: packageId,
                     versionRange: range,
-                    typeConstraint: LibraryDependencyTarget.Package)
+                    typeConstraint: LibraryDependencyTarget.Package),
+                SuppressParent = __.SuppressParent
             };
 
             await ProjectServices.References.AddOrUpdatePackageReferenceAsync(dependency, token);

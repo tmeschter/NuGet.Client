@@ -333,6 +333,19 @@ namespace NuGet.Commands
                 // In some failure cases where there is a conflict the root level project cannot be resolved, this should be handled gracefully
                 if (resolvedEntry != null)
                 {
+                    foreach(var dependency in frameworkInfo.Dependencies)
+                    {
+                        if (dependency.SuppressParent == LibraryIncludeFlagUtils.DefaultSuppressParent)
+                        {
+                            var resolvedDependency = resolvedEntry.Data.Dependencies.First(dep => dep.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase));
+
+                            if (resolvedDependency != null && resolvedDependency.SuppressParent != LibraryIncludeFlagUtils.DefaultSuppressParent)
+                            {
+                                dependency.SuppressParent = resolvedDependency.SuppressParent;
+                            }
+                        }
+                    }
+
                     dependencies.AddRange(resolvedEntry.Data.Dependencies.Where(lib =>
                         lib.LibraryRange.TypeConstraint == LibraryDependencyTarget.ExternalProject)
                         .Select(lib => lib.LibraryRange));
