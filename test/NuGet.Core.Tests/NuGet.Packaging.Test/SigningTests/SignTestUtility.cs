@@ -37,9 +37,14 @@ namespace NuGet.Packaging.Test
             return result;
         }
 
+        internal static byte[] GetResourceBytes(string name)
+        {
+            return ResourceTestUtility.GetResourceBytes($"NuGet.Packaging.Test.compiler.resources.{name}", typeof(SignTestUtility));
+        }
+
         internal static X509Certificate2 GetCertificate(string name)
         {
-            var bytes = ResourceTestUtility.GetResourceBytes($"NuGet.Packaging.Test.compiler.resources.{name}", typeof(SignTestUtility));
+            var bytes = GetResourceBytes(name);
 
             return new X509Certificate2(bytes);
         }

@@ -308,50 +308,6 @@ namespace NuGet.Packaging.Signing
             return values;
         }
 
-        // ESSCertIDv2::=  SEQUENCE {
-        //    hashAlgorithm AlgorithmIdentifier
-        //           DEFAULT {algorithm id-sha256 },
-        //    certHash Hash,
-        //    issuerSerial IssuerSerial OPTIONAL
-        // }
-        private static byte[][] CreateESSCertIDv2Entry(X509Certificate2 cert, Common.HashAlgorithmName hashAlgorithm)
-        {
-            // Get hash Oid
-            var hashAlgorithmOid = hashAlgorithm.ConvertToOidString();
-            var hash = CertificateUtility.GetHash(cert, hashAlgorithm);
-            var serialNumber = cert.GetSerialNumber();
-
-            // Convert from little endian to big endian.
-            Array.Reverse(serialNumber);
-
-            return DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
-            {
-                DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
-                {
-                    // AlgorithmIdentifier
-                    DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
-                    {
-                        DerEncoder.SegmentedEncodeOid(hashAlgorithmOid)
-                    }),
-
-                    // Hash
-                    DerEncoder.SegmentedEncodeOctetString(hash),
-
-                    // IssuerSerial
-                    DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
-                    {
-                        DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
-                        {
-                            // GeneralNames
-                            DerEncoder.ConstructSegmentedContextSpecificValue(contextId: 4, items: new byte[][] { cert.IssuerName.RawData })
-                        }),
-
-                        DerEncoder.SegmentedEncodeUnsignedInteger(serialNumber)
-                    })
-                })
-            });
-        }
-
         // Cert -> Hash pair
         private static KeyValuePair<Common.HashAlgorithmName, byte[]> GetESSCertIDv2Entry(X509Certificate2 cert, Common.HashAlgorithmName hashAlgorithm)
         {
