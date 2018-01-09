@@ -125,7 +125,7 @@ namespace NuGet.Commands
             var excludeFlags = GetIncludeFlags(excludeAssets, LibraryIncludeFlags.None);
 
             dependency.IncludeType = includeFlags & ~excludeFlags;
-            dependency.SuppressParent = GetIncludeFlags(privateAssets, LibraryIncludeFlagUtils.DefaultSuppressParent);
+            dependency.SuppressParent = GetIncludeFlags(privateAssets, LibraryIncludeFlagUtils.DefaultSuppressParent); // TODO NK 
         }
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace NuGet.Commands
         {
             dependency.IncludeAssets = GetIncludeFlags(includeAssets, LibraryIncludeFlags.All);
             dependency.ExcludeAssets = GetIncludeFlags(excludeAssets, LibraryIncludeFlags.None);
-            dependency.PrivateAssets = GetIncludeFlags(privateAssets, LibraryIncludeFlagUtils.DefaultSuppressParent);
+            dependency.PrivateAssets = GetIncludeFlags(privateAssets, LibraryIncludeFlagUtils.DefaultSuppressParent); // TODO NK 
         }
 
         /// <summary>

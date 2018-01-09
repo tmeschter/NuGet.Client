@@ -17,7 +17,7 @@ namespace NuGet.LibraryModel
 
         public LibraryIncludeFlags IncludeType { get; set; } = LibraryIncludeFlags.All;
 
-        public LibraryIncludeFlags SuppressParent { get; set; } = LibraryIncludeFlagUtils.DefaultSuppressParent;
+        public LibraryIncludeFlags SuppressParent { get; set; } = LibraryIncludeFlagUtils.DefaultSuppressParent; // TODO NK - Default Suppress parent value...this spawns way more values
 
         public IList<NuGetLogCode> NoWarn { get; set; } = new List<NuGetLogCode>();
 

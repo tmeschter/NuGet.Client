@@ -26,7 +26,7 @@ namespace NuGet.ProjectModel
 
         public LibraryIncludeFlags ExcludeAssets { get; set; }
 
-        public LibraryIncludeFlags PrivateAssets { get; set; } = LibraryIncludeFlagUtils.DefaultSuppressParent;
+        public LibraryIncludeFlags PrivateAssets { get; set; } = LibraryIncludeFlagUtils.DefaultSuppressParent; // TODO NK - this is where all of the spawn, lots in this class
 
         public override int GetHashCode()
         {

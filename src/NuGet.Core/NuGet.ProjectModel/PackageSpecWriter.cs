@@ -221,7 +221,7 @@ namespace NuGet.ProjectModel
                                 writer.WriteNameValue("excludeAssets", LibraryIncludeFlagUtils.GetFlagString(project.ExcludeAssets));
                             }
 
-                            if (project.PrivateAssets != LibraryIncludeFlagUtils.DefaultSuppressParent)
+                            if (project.PrivateAssets != LibraryIncludeFlagUtils.DefaultSuppressParent) // TODO NK - lots in this class
                             {
                                 writer.WriteNameValue("privateAssets", LibraryIncludeFlagUtils.GetFlagString(project.PrivateAssets));
                             }

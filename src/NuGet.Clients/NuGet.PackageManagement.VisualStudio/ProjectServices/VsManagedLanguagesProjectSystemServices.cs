@@ -251,7 +251,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 metadataValues.Add(LibraryIncludeFlagUtils.GetFlagString(includeFlags).Replace(',', ';'));
             }
 
-            if (privateAssetsFlag != LibraryIncludeFlagUtils.DefaultSuppressParent)
+            if (privateAssetsFlag != LibraryIncludeFlagUtils.DefaultSuppressParent) // TODO NK 
             {
                 metadataElements.Add(ProjectItemProperties.PrivateAssets);
                 metadataValues.Add(LibraryIncludeFlagUtils.GetFlagString(privateAssetsFlag).Replace(',', ';'));

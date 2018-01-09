@@ -276,7 +276,7 @@ namespace NuGet.ProjectModel
 
                                 PrivateAssets = LibraryIncludeFlagUtils.GetFlags(
                                     flags: prop.Value.GetValue<string>("privateAssets"),
-                                    defaultFlags: LibraryIncludeFlagUtils.DefaultSuppressParent),
+                                    defaultFlags: LibraryIncludeFlagUtils.DefaultSuppressParent), // TODO NK - lots here
                             });
                         }
                     }
