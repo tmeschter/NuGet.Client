@@ -334,7 +334,7 @@ namespace NuGet.Commands
             contentItems.Load(compatibilityData.Files);
 
 
-            if (compatibilityData.TargetLibrary.PackageType.Any(e => e.Equals(PackageType.DotnetTool)))
+            if (compatibilityData.TargetLibrary.PackageType.Contains(PackageType.DotnetTool))
             {
                 foreach (var group in contentItems.FindItemGroups(graph.Conventions.Patterns.ToolsAssemblies))
                 {
@@ -363,7 +363,7 @@ namespace NuGet.Commands
                     new PackageIdentity(node.Key.Name, node.Key.Version));
 
                 issues.Add(issue);
-                await _log.LogAsync(GetErrorMessage(NuGetLogCode.NU1204, issue, graph));//
+                await _log.LogAsync(GetErrorMessage(NuGetLogCode.NU1204, issue, graph));
             }
 
             if (containsDotnetToolPackageType &&
@@ -382,7 +382,7 @@ namespace NuGet.Commands
 
             if (ProjectStyle.DotnetToolReference == compatibilityData.PackageSpec.RestoreMetadata?.ProjectStyle)
             {
-                if (compatibilityData.PackageSpec.GetAllPackageDependencies().Any(e => e.Name.Equals(compatibilityData.TargetLibrary.Name)))
+                if (compatibilityData.PackageSpec.GetAllPackageDependencies().Any(e => e.Name.Equals(compatibilityData.TargetLibrary.Name, StringComparison.OrdinalIgnoreCase)))
                 {
                     if (!containsDotnetToolPackageType)
                     {
