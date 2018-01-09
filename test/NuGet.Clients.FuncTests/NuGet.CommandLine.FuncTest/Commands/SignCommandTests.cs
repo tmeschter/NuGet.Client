@@ -5,9 +5,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using FluentAssertions;
 using NuGet.Common;
 using NuGet.Test.Utility;
+using Org.BouncyCastle.Ocsp;
 using Test.Utility.Signing;
 using Xunit;
 
@@ -230,6 +232,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
         {
             // Arrange
             var cert = _testFixture.TrustedTestCertificateChain.Leaf;
+            cert.Source.Status = new UnknownStatus();
 
             using (var dir = TestDirectory.Create())
             using (var zipStream = new SimpleTestPackageContext().CreateAsStream())
@@ -247,7 +250,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
                 var result = CommandRunner.Run(
                     _nugetExePath,
                     dir,
-                    $"sign {packagePath} -CertificateFingerprint {cert.Source.Cert.Thumbprint}  -CertificateStoreName {cert.StoreName} -CertificateStoreLocation {cert.StoreLocation} -Verbosity Detailed",
+                    $"sign {packagePath} -CertificateFingerprint {cert.Source.Cert.Thumbprint}  -CertificateStoreName {cert.StoreName} -CertificateStoreLocation {cert.StoreLocation}",
                     waitForExit: true);
 
                 // Assert
@@ -256,6 +259,9 @@ namespace NuGet.CommandLine.FuncTest.Commands
                 result.AllOutput.Should().Contain(_chainBuildFailureErrorCode);
                 result.AllOutput.Should().Contain("Revoked");
             }
+
+            // reset the leaf cert
+            cert.Source.Status = CertificateStatus.Good;
         }
 
         [CIOnlyFact]
@@ -263,6 +269,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
         {
             // Arrange
             var cert = _testFixture.TrustedTestCertificateChain.Leaf;
+            cert.Source.Status = new RevokedStatus(DateTime.UtcNow, reason: 0);
 
             using (var dir = TestDirectory.Create())
             using (var zipStream = new SimpleTestPackageContext().CreateAsStream())
@@ -280,7 +287,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
                 var result = CommandRunner.Run(
                     _nugetExePath,
                     dir,
-                    $"sign {packagePath} -CertificateFingerprint {cert.Source.Cert.Thumbprint} -CertificateStoreName {cert.StoreName} -CertificateStoreLocation {cert.StoreLocation} -Verbosity Detailed",
+                    $"sign {packagePath} -CertificateFingerprint {cert.Source.Cert.Thumbprint} -CertificateStoreName {cert.StoreName} -CertificateStoreLocation {cert.StoreLocation}",
                     waitForExit: true);
 
                 // Assert
@@ -289,6 +296,9 @@ namespace NuGet.CommandLine.FuncTest.Commands
                 result.AllOutput.Should().Contain(_chainBuildFailureErrorCode);
                 result.AllOutput.Should().Contain("RevocationStatusUnknown");
             }
+
+            // reset the leaf cert
+            cert.Source.Status = CertificateStatus.Good;
         }
 
         [CIOnlyFact]

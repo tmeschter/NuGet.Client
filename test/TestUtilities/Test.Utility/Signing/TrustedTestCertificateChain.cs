@@ -30,9 +30,20 @@ namespace Test.Utility.Signing
             }
 
             Certificates = certificates;
+            var path = @"c:\users\anmishr\desktop";
+            var i = 0;
 
             foreach (var cert in Certificates)
             {
+                var filePath = Path.Combine(path, $"test{i++}.cer");
+
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+
+                File.WriteAllBytes(filePath, cert.Source.Cert.Export(X509ContentType.Cert));
+
                 _certLookUp[cert.Source.Cert.SerialNumber] = cert.Source;
             }
         }

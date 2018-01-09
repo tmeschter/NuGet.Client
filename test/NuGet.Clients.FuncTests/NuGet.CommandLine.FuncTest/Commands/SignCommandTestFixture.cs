@@ -158,7 +158,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
                                     basicOcspRespGenerator.SetResponseExtensions(extensions);
                                 }
 
-                                var currentDateTime = DateTime.Now;
+                                var currentDateTime = DateTime.UtcNow;
                                 var issuer = _trustedTestCertChain.Root.Source;
 
                                 foreach (var ocspReq in ocspRequestList)
@@ -173,7 +173,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
                                         issuer = certificate.Issuer;
                                     }
 
-                                    basicOcspRespGenerator.AddResponse(certificateId, CertificateStatus.Good, thisUpdate: currentDateTime, nextUpdate: currentDateTime.AddDays(1), singleExtensions: null);
+                                    basicOcspRespGenerator.AddResponse(certificateId, status, thisUpdate: currentDateTime, nextUpdate: currentDateTime.AddDays(1), singleExtensions: null);
                                 }
 
                                 var certificateChain = _trustedTestCertChain.Certificates.Select(c => c.Source.BouncyCastleCert).ToArray();
