@@ -114,7 +114,6 @@ namespace Test.Utility.Signing
                 {
                     var chainCertificateRequest = new ChainCertificateRequest()
                     {
-                        CrlLocalBaseUri = crlLocalUri,
                         CrlServerBaseUri = crlServerUri,
                         IsCA = true
                     };
@@ -126,7 +125,6 @@ namespace Test.Utility.Signing
                 {
                     var chainCertificateRequest = new ChainCertificateRequest()
                     {
-                        CrlLocalBaseUri = crlLocalUri,
                         CrlServerBaseUri = crlServerUri,
                         IsCA = true,
                         Issuer = issuer.Source
@@ -139,7 +137,6 @@ namespace Test.Utility.Signing
                 {
                     var chainCertificateRequest = new ChainCertificateRequest()
                     {
-                        CrlLocalBaseUri = crlLocalUri,
                         CrlServerBaseUri = crlServerUri,
                         IsCA = false,
                         Issuer = issuer.Source

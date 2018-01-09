@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Test.Utility.Signing
 {
@@ -10,13 +9,10 @@ namespace Test.Utility.Signing
     {
         public string CrlServerBaseUri { get; set; }
 
-        public string CrlLocalBaseUri { get; set; }
-
         public bool IsCA { get; set; }
 
         public TestCertificate Issuer { get; set; }
 
         public string IssuerDN => Issuer?.Cert.Subject;
-
     }
 }

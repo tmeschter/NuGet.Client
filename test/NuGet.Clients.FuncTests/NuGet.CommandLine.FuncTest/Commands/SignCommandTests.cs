@@ -232,7 +232,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
         {
             // Arrange
             var cert = _testFixture.TrustedTestCertificateChain.Leaf;
-            cert.Source.Status = new UnknownStatus();
+            cert.Source.Status = new RevokedStatus(DateTime.UtcNow, reason: 0);
 
             using (var dir = TestDirectory.Create())
             using (var zipStream = new SimpleTestPackageContext().CreateAsStream())
@@ -260,8 +260,8 @@ namespace NuGet.CommandLine.FuncTest.Commands
                 result.AllOutput.Should().Contain("Revoked");
             }
 
-            // reset the leaf cert
-            cert.Source.Status = CertificateStatus.Good;
+            // reset the cert chain
+            _testFixture.ResetTrustedTestCertChain();
         }
 
         [CIOnlyFact]
@@ -269,7 +269,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
         {
             // Arrange
             var cert = _testFixture.TrustedTestCertificateChain.Leaf;
-            cert.Source.Status = new RevokedStatus(DateTime.UtcNow, reason: 0);
+            cert.Source.Status = new UnknownStatus();
 
             using (var dir = TestDirectory.Create())
             using (var zipStream = new SimpleTestPackageContext().CreateAsStream())
@@ -297,8 +297,8 @@ namespace NuGet.CommandLine.FuncTest.Commands
                 result.AllOutput.Should().Contain("RevocationStatusUnknown");
             }
 
-            // reset the leaf cert
-            cert.Source.Status = CertificateStatus.Good;
+            // reset the cert chain
+            _testFixture.ResetTrustedTestCertChain();
         }
 
         [CIOnlyFact]

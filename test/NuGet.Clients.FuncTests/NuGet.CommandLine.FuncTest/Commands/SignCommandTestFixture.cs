@@ -3,11 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using NuGet.CommandLine.Test;
 using NuGet.Packaging.Signing;
 using NuGet.Test.Utility;
@@ -39,7 +37,6 @@ namespace NuGet.CommandLine.FuncTest.Commands
         private SigningSpecifications _signingSpecifications;
         private MockServer _crlServer;
         private bool _crlServerRunning;
-        private object _crlServerRunningLock = new object();
         private TestDirectory _testDirectory;
         private string _nugetExePath;
 
@@ -132,77 +129,74 @@ namespace NuGet.CommandLine.FuncTest.Commands
 
         private void SetUpCrlDistributionPoint()
         {
-            lock (_crlServerRunningLock)
+            if (!_crlServerRunning)
             {
-                if (!_crlServerRunning)
-                {
-                    CrlServer.Post.Add(
-                        "/",
-                        request =>
+                CrlServer.Post.Add(
+                    "/",
+                    request =>
+                    {
+                        if (string.Equals(request.ContentType, _ocspRequestContentType, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (string.Equals(request.ContentType, _ocspRequestContentType, StringComparison.OrdinalIgnoreCase))
-                            {
-                                var ocspRequest = new OcspReq(request.InputStream);
-                                var respId = new RespID(new ResponderID(new X509Name(_trustedTestCertChain.Root.Source.Cert.Subject)));
-                                var basicOcspRespGenerator = new BasicOcspRespGenerator(respId);
-                                var nonce = ocspRequest.GetExtensionValue(OcspObjectIdentifiers.PkixOcspNonce);
-                                var ocspRequestList = ocspRequest.GetRequestList();
+                            var ocspRequest = new OcspReq(request.InputStream);
+                            var respId = new RespID(new ResponderID(new X509Name(TrustedTestCertificateChain.Root.Source.Cert.Subject)));
+                            var basicOcspRespGenerator = new BasicOcspRespGenerator(respId);
+                            var nonce = ocspRequest.GetExtensionValue(OcspObjectIdentifiers.PkixOcspNonce);
+                            var ocspRequestList = ocspRequest.GetRequestList();
 
-                                if (nonce != null)
+                            if (nonce != null)
+                            {
+                                var extensions = new X509Extensions(new Dictionary<DerObjectIdentifier, Org.BouncyCastle.Asn1.X509.X509Extension>()
                                 {
-                                    var extensions = new X509Extensions(new Dictionary<DerObjectIdentifier, Org.BouncyCastle.Asn1.X509.X509Extension>()
-                                    {
                                         { OcspObjectIdentifiers.PkixOcspNonce, new Org.BouncyCastle.Asn1.X509.X509Extension(critical: false, value: nonce) }
-                                    });
-
-                                    basicOcspRespGenerator.SetResponseExtensions(extensions);
-                                }
-
-                                var currentDateTime = DateTime.UtcNow;
-                                var issuer = _trustedTestCertChain.Root.Source;
-
-                                foreach (var ocspReq in ocspRequestList)
-                                {
-                                    var certificateId = ocspReq.GetCertID();
-                                    var certificate = _trustedTestCertChain.GetCertificate(certificateId.SerialNumber.ToString(radix: 16));
-                                    CertificateStatus status = new UnknownStatus();
-
-                                    if (certificate != null)
-                                    {
-                                        status = certificate.Status;
-                                        issuer = certificate.Issuer;
-                                    }
-
-                                    basicOcspRespGenerator.AddResponse(certificateId, status, thisUpdate: currentDateTime, nextUpdate: currentDateTime.AddDays(1), singleExtensions: null);
-                                }
-
-                                var certificateChain = _trustedTestCertChain.Certificates.Select(c => c.Source.BouncyCastleCert).ToArray();
-                                var basicOcspResp = basicOcspRespGenerator.Generate("SHA512WITHRSA", issuer.KeyPair.Private, certificateChain, currentDateTime);
-                                var ocspRespGenerator = new OCSPRespGenerator();
-                                var ocspResp = ocspRespGenerator.Generate(OCSPRespGenerator.Successful, basicOcspResp);
-                                var bytes = ocspResp.GetEncoded();
-
-                                return new Action<HttpListenerResponse>(response =>
-                                {
-                                    response.StatusCode = 200;
-                                    response.ContentType = _ocspResponseContentType;
-                                    response.ContentLength64 = bytes.Length;
-                                    response.OutputStream.Write(bytes, 0, bytes.Length);
                                 });
 
+                                basicOcspRespGenerator.SetResponseExtensions(extensions);
                             }
-                            else
+
+                            var currentDateTime = DateTime.UtcNow;
+                            var issuer = TrustedTestCertificateChain.Root.Source;
+
+                            foreach (var ocspReq in ocspRequestList)
                             {
-                                return new Action<HttpListenerResponse>(response =>
-                                {
-                                    response.StatusCode = 400;
-                                });
-                            }
-                        });
+                                var certificateId = ocspReq.GetCertID();
+                                var certificate = TrustedTestCertificateChain.GetCertificate(certificateId.SerialNumber.ToString(radix: 16));
+                                CertificateStatus status = new UnknownStatus();
 
-                    CrlServer.Start();
-                    _crlServerRunning = true;
-                }
+                                if (certificate != null)
+                                {
+                                    status = certificate.Status;
+                                    issuer = certificate.Issuer;
+                                }
+
+                                basicOcspRespGenerator.AddResponse(certificateId, status, thisUpdate: currentDateTime, nextUpdate: currentDateTime.AddDays(1), singleExtensions: null);
+                            }
+
+                            var certificateChain = TrustedTestCertificateChain.Certificates.Select(c => c.Source.BouncyCastleCert).ToArray();
+                            var basicOcspResp = basicOcspRespGenerator.Generate("SHA512WITHRSA", issuer.KeyPair.Private, certificateChain, currentDateTime);
+                            var ocspRespGenerator = new OCSPRespGenerator();
+                            var ocspResp = ocspRespGenerator.Generate(OCSPRespGenerator.Successful, basicOcspResp);
+                            var bytes = ocspResp.GetEncoded();
+
+                            return new Action<HttpListenerResponse>(response =>
+                            {
+                                response.StatusCode = 200;
+                                response.ContentType = _ocspResponseContentType;
+                                response.ContentLength64 = bytes.Length;
+                                response.OutputStream.Write(bytes, 0, bytes.Length);
+                            });
+
+                        }
+                        else
+                        {
+                            return new Action<HttpListenerResponse>(response =>
+                            {
+                                response.StatusCode = 400;
+                            });
+                        }
+                    });
+
+                CrlServer.Start();
+                _crlServerRunning = true;
             }
         }
 
@@ -277,6 +271,18 @@ namespace NuGet.CommandLine.FuncTest.Commands
 
         public string Timestamper => _testTimestampServer;
 
+        /// <summary>
+        /// Resets TrustedTestCertificateChain to a new chain.
+        /// Should be used after any test that changes the revocatipon status of a certificate in the chain as CryptoAPI caches results.
+        /// </summary>
+        public void ResetTrustedTestCertChain()
+        {
+            // dispose existing resources
+            _trustedTestCertChain?.Dispose();
+
+            // set the chain to null to force creation of a new chain in the next test
+            _trustedTestCertChain = null;
+        }
 
         public void Dispose()
         {

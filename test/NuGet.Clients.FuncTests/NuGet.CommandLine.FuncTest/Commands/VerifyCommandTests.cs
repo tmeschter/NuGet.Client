@@ -2,10 +2,13 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using FluentAssertions;
 using NuGet.Common;
 using NuGet.Test.Utility;
+using Org.BouncyCastle.Ocsp;
 using Test.Utility.Signing;
 using Xunit;
 
@@ -189,6 +192,51 @@ namespace NuGet.CommandLine.FuncTest.Commands
                 // Assert
                 verifyResult.Success.Should().BeTrue();
                 verifyResult.AllOutput.Should().Contain(_noTimestamperWarningCode);
+            }
+        }
+
+        [CIOnlyFact]
+        public void VerifyCommand_VerifyOnPackageSignedWithRevokedCertificateChainFails()
+        {
+            // Arrange
+            var cert = _testFixture.TrustedTestCertificateChain.Leaf;
+
+            using (var dir = TestDirectory.Create())
+            using (var zipStream = new SimpleTestPackageContext().CreateAsStream())
+            {
+                var packagePath = Path.Combine(dir, Guid.NewGuid().ToString());
+
+                zipStream.Seek(offset: 0, loc: SeekOrigin.Begin);
+
+                using (var fileStream = File.OpenWrite(packagePath))
+                {
+                    zipStream.CopyTo(fileStream);
+                }
+
+                var signResult = CommandRunner.Run(
+                    _nugetExePath,
+                    dir,
+                    $"sign {packagePath} -CertificateFingerprint {cert.Source.Cert.Thumbprint}  -CertificateStoreName {cert.StoreName} -CertificateStoreLocation {cert.StoreLocation}",
+                    waitForExit: true);
+
+                signResult.Success.Should().BeTrue();
+
+                // revoke the leaf cert
+                cert.Source.Status = new RevokedStatus(DateTime.UtcNow, reason: 0);
+
+                // Act
+                var verifyResult = CommandRunner.Run(
+                    _nugetExePath,
+                    dir,
+                    $"verify {packagePath} -Signatures",
+                    waitForExit: true);
+
+                // Assert
+                verifyResult.Success.Should().BeFalse();
+                verifyResult.AllOutput.Should().Contain(_noTimestamperWarningCode);
+
+                // reset the cert chain
+                _testFixture.ResetTrustedTestCertChain();
             }
         }
     }
