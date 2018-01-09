@@ -24,6 +24,18 @@
     </UpgradeBackupLocation>
     <OldToolsVersion>14.0</OldToolsVersion>
   </PropertyGroup>
+  <ItemGroup Condition=" '$(SkipAssemblyAttributes)' != 'true'">
+    <AssemblyAttributes Include="Microsoft.VisualStudio.Shell.ProvideCodeBase">
+      <AssemblyName>$(AssemblyName)</AssemblyName>
+      <Version>$(SemanticVersion).$(PreReleaseVersion)</Version>
+      <CodeBase>$PackageFolder$\\$(AssemblyName).dll</CodeBase>
+    </AssemblyAttributes>
+    <AssemblyAttributes Include="Microsoft.VisualStudio.Shell.ProvideCodeBase">
+      <AssemblyName>NuGet.PackageManagement.VisualStudio</AssemblyName>
+      <Version>$(SemanticVersion).$(PreReleaseVersion)</Version>
+      <CodeBase>$PackageFolder$\\NuGet.PackageManagement.VisualStudio.dll</CodeBase>
+    </AssemblyAttributes>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
