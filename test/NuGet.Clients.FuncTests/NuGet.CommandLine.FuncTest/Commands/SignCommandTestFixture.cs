@@ -7,9 +7,14 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using NuGet.CommandLine.Test;
 using NuGet.Packaging.Signing;
 using NuGet.Test.Utility;
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.Ocsp;
+using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.Ocsp;
 using Test.Utility.Signing;
 
 namespace NuGet.CommandLine.FuncTest.Commands
@@ -21,16 +26,15 @@ namespace NuGet.CommandLine.FuncTest.Commands
     {
         private static readonly string _testTimestampServer = Environment.GetEnvironmentVariable("TIMESTAMP_SERVER_URL");
 
-        private const int _validCertChainLength = 3;
-        private const int _invalidCertChainLength = 2;
+        private const string _ocspRequestContentType = "application/ocsp-request";
+        private const string _ocspResponseContentType = "application/ocsp-response";
+        private const int _validCertChainLength = 2;
 
         private TrustedTestCert<TestCertificate> _trustedTestCert;
         private TrustedTestCert<TestCertificate> _trustedTestCertWithInvalidEku;
         private TrustedTestCert<TestCertificate> _trustedTestCertExpired;
         private TrustedTestCert<TestCertificate> _trustedTestCertNotYetValid;
-        private TrustedCertificateChain _trustedTestCertChain;
-        private TrustedCertificateChain _revokedTestCertChain;
-        private TrustedCertificateChain _revocationUnknownTestCertChain;
+        private TrustedTestCertificateChain _trustedTestCertChain;
         private IList<ISignatureVerificationProvider> _trustProviders;
         private SigningSpecifications _signingSpecifications;
         private MockServer _crlServer;
@@ -110,18 +114,14 @@ namespace NuGet.CommandLine.FuncTest.Commands
             }
         }
 
-        public TrustedCertificateChain TrustedTestCertificateChain
+        public TrustedTestCertificateChain TrustedTestCertificateChain
         {
             get
             {
                 if (_trustedTestCertChain == null)
                 {
                     var certChain = SigningTestUtility.GenerateCertificateChain(_validCertChainLength, CrlServer.Uri, TestDirectory.Path);
-
-                    _trustedTestCertChain = new TrustedCertificateChain()
-                    {
-                        Certificates = certChain
-                    };
+                    _trustedTestCertChain = new TrustedTestCertificateChain(certChain);
 
                     SetUpCrlDistributionPoint();
                 }
@@ -130,56 +130,81 @@ namespace NuGet.CommandLine.FuncTest.Commands
             }
         }
 
-        public TrustedTestCert<TestCertificate> RevokedTestCertificateWithChain
+        private void SetUpCrlDistributionPoint()
         {
-            get
+            lock (_crlServerRunningLock)
             {
-                if (_revokedTestCertChain == null)
+                if (!_crlServerRunning)
                 {
-                    var certChain = SigningTestUtility.GenerateCertificateChain(_invalidCertChainLength, CrlServer.Uri, TestDirectory.Path);
+                    CrlServer.Post.Add(
+                        "/",
+                        request =>
+                        {
+                            if (string.Equals(request.ContentType, _ocspRequestContentType, StringComparison.OrdinalIgnoreCase))
+                            {
+                                var ocspRequest = new OcspReq(request.InputStream);
+                                var respId = new RespID(new ResponderID(new X509Name(_trustedTestCertChain.Root.Source.Cert.Subject)));
+                                var basicOcspRespGenerator = new BasicOcspRespGenerator(respId);
+                                var nonce = ocspRequest.GetExtensionValue(OcspObjectIdentifiers.PkixOcspNonce);
+                                var ocspRequestList = ocspRequest.GetRequestList();
 
-                    _revokedTestCertChain = new TrustedCertificateChain()
-                    {
-                        Certificates = certChain
-                    };
+                                if (nonce != null)
+                                {
+                                    var extensions = new X509Extensions(new Dictionary<DerObjectIdentifier, Org.BouncyCastle.Asn1.X509.X509Extension>()
+                                    {
+                                        { OcspObjectIdentifiers.PkixOcspNonce, new Org.BouncyCastle.Asn1.X509.X509Extension(critical: false, value: nonce) }
+                                    });
 
-                    // mark leaf certificate as revoked
-                    _revokedTestCertChain.Certificates[0].Source.Crl.RevokeCertificate(_revokedTestCertChain.Leaf.Source.Cert);
+                                    basicOcspRespGenerator.SetResponseExtensions(extensions);
+                                }
 
-                    SetUpCrlDistributionPoint();
+                                var currentDateTime = DateTime.Now;
+                                var issuer = _trustedTestCertChain.Root.Source;
+
+                                foreach (var ocspReq in ocspRequestList)
+                                {
+                                    var certificateId = ocspReq.GetCertID();
+                                    var certificate = _trustedTestCertChain.GetCertificate(certificateId.SerialNumber.ToString(radix: 16));
+                                    CertificateStatus status = new UnknownStatus();
+
+                                    if (certificate != null)
+                                    {
+                                        status = certificate.Status;
+                                        issuer = certificate.Issuer;
+                                    }
+
+                                    basicOcspRespGenerator.AddResponse(certificateId, CertificateStatus.Good, thisUpdate: currentDateTime, nextUpdate: currentDateTime.AddDays(1), singleExtensions: null);
+                                }
+
+                                var certificateChain = _trustedTestCertChain.Certificates.Select(c => c.Source.BouncyCastleCert).ToArray();
+                                var basicOcspResp = basicOcspRespGenerator.Generate("SHA512WITHRSA", issuer.KeyPair.Private, certificateChain, currentDateTime);
+                                var ocspRespGenerator = new OCSPRespGenerator();
+                                var ocspResp = ocspRespGenerator.Generate(OCSPRespGenerator.Successful, basicOcspResp);
+                                var bytes = ocspResp.GetEncoded();
+
+                                return new Action<HttpListenerResponse>(response =>
+                                {
+                                    response.StatusCode = 200;
+                                    response.ContentType = _ocspResponseContentType;
+                                    response.ContentLength64 = bytes.Length;
+                                    response.OutputStream.Write(bytes, 0, bytes.Length);
+                                });
+
+                            }
+                            else
+                            {
+                                return new Action<HttpListenerResponse>(response =>
+                                {
+                                    response.StatusCode = 400;
+                                });
+                            }
+                        });
+
+                    CrlServer.Start();
+                    _crlServerRunning = true;
                 }
-
-                return _revokedTestCertChain.Leaf;
             }
         }
-
-        public TrustedTestCert<TestCertificate> RevocationUnknownTestCertificateWithChain
-        {
-            get
-            {
-                if (_revocationUnknownTestCertChain == null)
-                {
-                    var certChain = SigningTestUtility.GenerateCertificateChain(_invalidCertChainLength, CrlServer.Uri, TestDirectory.Path);
-
-                    _revocationUnknownTestCertChain = new TrustedCertificateChain()
-                    {
-                        Certificates = certChain
-                    };
-
-                    // delete crl to make revocation status unknown
-                    var crlPath = _revocationUnknownTestCertChain.Certificates[0].Source.Crl.CrlLocalPath;
-                    if (File.Exists(crlPath))
-                    {
-                        File.Delete(crlPath);
-                    }
-
-                    SetUpCrlDistributionPoint();
-                }
-
-                return _revocationUnknownTestCertChain.Leaf;
-            }
-        }
-
 
         public IList<ISignatureVerificationProvider> TrustProviders
         {
@@ -247,57 +272,11 @@ namespace NuGet.CommandLine.FuncTest.Commands
 
                 return _testDirectory;
             }
+
         }
 
         public string Timestamper => _testTimestampServer;
 
-        private void SetUpCrlDistributionPoint()
-        {
-            lock (_crlServerRunningLock)
-            {
-                if (!_crlServerRunning)
-                {
-                    CrlServer.Get.Add(
-                        "/",
-                        request =>
-                        {
-                            var urlSplits = request.RawUrl.Split('/').Where(s => !string.IsNullOrEmpty(s)).ToArray();
-                            if (urlSplits.Length != 2 || !urlSplits[1].EndsWith(".crl"))
-                            {
-                                return new Action<HttpListenerResponse>(response =>
-                                {
-                                    response.StatusCode = 404;
-                                });
-                            }
-                            else
-                            {
-                                var crlName = urlSplits[1];
-                                var crlPath = Path.Combine(TestDirectory, crlName);
-                                if (File.Exists(crlPath))
-                                {
-                                    return new Action<HttpListenerResponse>(response =>
-                                    {
-                                        response.ContentType = "application/pkix-crl";
-                                        response.StatusCode = 200;
-                                        var content = File.ReadAllBytes(crlPath);
-                                        MockServer.SetResponseContent(response, content);
-                                    });
-                                }
-                                else
-                                {
-                                    return new Action<HttpListenerResponse>(response =>
-                                    {
-                                        response.StatusCode = 404;
-                                    });
-                                }
-                            }
-                        });
-
-                    CrlServer.Start();
-                    _crlServerRunning = true;
-                }
-            }
-        }
 
         public void Dispose()
         {
@@ -306,8 +285,6 @@ namespace NuGet.CommandLine.FuncTest.Commands
             _trustedTestCertExpired?.Dispose();
             _trustedTestCertNotYetValid?.Dispose();
             _trustedTestCertChain?.Dispose();
-            _revokedTestCertChain?.Dispose();
-            _revocationUnknownTestCertChain?.Dispose();
             _crlServer?.Stop();
             _crlServer?.Dispose();
             _testDirectory?.Dispose();

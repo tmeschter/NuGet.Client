@@ -229,7 +229,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
         public void SignCommand_SignPackageWithRevokedLeafCertChain()
         {
             // Arrange
-            var cert = _testFixture.RevokedTestCertificateWithChain;
+            var cert = _testFixture.TrustedTestCertificateChain.Leaf;
 
             using (var dir = TestDirectory.Create())
             using (var zipStream = new SimpleTestPackageContext().CreateAsStream())
@@ -262,7 +262,7 @@ namespace NuGet.CommandLine.FuncTest.Commands
         public void SignCommand_SignPackageWithUnknownRevocationCertChain()
         {
             // Arrange
-            var cert = _testFixture.RevocationUnknownTestCertificateWithChain;
+            var cert = _testFixture.TrustedTestCertificateChain.Leaf;
 
             using (var dir = TestDirectory.Create())
             using (var zipStream = new SimpleTestPackageContext().CreateAsStream())

@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -32,6 +32,7 @@ namespace NuGet.CommandLine.Test
         public RouteTable Get { get; }
         public RouteTable Put { get; }
         public RouteTable Delete { get; }
+        public RouteTable Post { get; }
         public string Uri { get { return PortReserver.BaseUri; } }
 
         /// <summary>
@@ -54,6 +55,7 @@ namespace NuGet.CommandLine.Test
             Get = new RouteTable(BasePath);
             Put = new RouteTable(BasePath);
             Delete = new RouteTable(BasePath);
+            Post = new RouteTable(BasePath);
         }
 
         private List<string> ServerWarnings { get; } = new List<string>();
@@ -277,6 +279,10 @@ namespace NuGet.CommandLine.Test
                 {
                     m = Delete;
                 }
+                else if (request.HttpMethod == "POST")
+                {
+                    m = Post;
+                }
 
                 if (m == null)
                 {
@@ -330,6 +336,7 @@ namespace NuGet.CommandLine.Test
             const int ERROR_INVALID_HANDLE = 6;
             const int ERROR_INVALID_FUNCTION = 1;
             const int ERROR_OPERATION_ABORTED_MONO = 500;
+            const int ERROR_NONEXISTENT_NETWORK = 1229;
 
             while (true)
             {
@@ -347,6 +354,7 @@ namespace NuGet.CommandLine.Test
                     if (ex.ErrorCode == ERROR_OPERATION_ABORTED ||
                         ex.ErrorCode == ERROR_INVALID_HANDLE ||
                         ex.ErrorCode == ERROR_INVALID_FUNCTION ||
+                        ex.ErrorCode == ERROR_NONEXISTENT_NETWORK ||
                         RuntimeEnvironmentHelper.IsMono && ex.ErrorCode == ERROR_OPERATION_ABORTED_MONO)
                     {
                         return;

@@ -3,6 +3,9 @@
 
 using System;
 using System.Security.Cryptography.X509Certificates;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Ocsp;
+using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
 namespace Test.Utility.Signing
@@ -18,6 +21,11 @@ namespace Test.Utility.Signing
         public X509Certificate2 Cert { get; set; }
 
         /// <summary>
+        /// Issuer Cert
+        /// </summary>
+        public TestCertificate Issuer { get; set; }
+
+        /// <summary>
         /// Public cert.
         /// </summary>
         public X509Certificate2 PublicCert => SigningTestUtility.GetPublicCert(Cert);
@@ -27,11 +35,22 @@ namespace Test.Utility.Signing
         /// </summary>
         public X509Certificate2 PublicCertWithPrivateKey => SigningTestUtility.GetPublicCertWithPrivateKey(Cert);
 
+#if IS_DESKTOP
         /// <summary>
-        /// Certificate Revocation List associated with a certificate.
-        /// This will be null if the certificate was not created as a CA certificate.
+        /// Org.BouncyCastle.X509.X509Certificate.
         /// </summary>
-        public CertificateRevocationList Crl { get; set; }
+        public Org.BouncyCastle.X509.X509Certificate BouncyCastleCert => DotNetUtilities.FromX509Certificate(Cert);
+
+        /// <summary>
+        /// Org.BouncyCastle.X509.X509Certificate.
+        /// </summary>
+        public AsymmetricCipherKeyPair KeyPair => DotNetUtilities.GetKeyPair(Cert.PrivateKey);
+#endif
+
+        /// <summary>
+        /// Certificate Revocation Status.
+        /// </summary>
+        public CertificateStatus Status { get; set; }
 
         /// <summary>
         /// Trust the PublicCert cert for the life of the object.
@@ -55,18 +74,12 @@ namespace Test.Utility.Signing
         {
             var certName = "NuGetTest-" + Guid.NewGuid().ToString();
             var cert = SigningTestUtility.GenerateCertificate(certName, modifyGenerator, chainCertificateRequest: chainCertificateRequest);
-            CertificateRevocationList crl = null;
-
-            // create a crl only if the certificate is part of a chain and it is a CA
-            if (chainCertificateRequest != null && chainCertificateRequest.IsCA)
-            {
-                crl = CertificateRevocationList.CreateCrl(cert, chainCertificateRequest.CrlLocalBaseUri);
-            }
 
             var testCertificate = new TestCertificate
             {
                 Cert = cert,
-                Crl = crl
+                Issuer = chainCertificateRequest?.Issuer,
+                Status = CertificateStatus.Good
             };
 
             return testCertificate;

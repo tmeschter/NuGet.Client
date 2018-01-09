@@ -39,7 +39,6 @@ namespace Test.Utility.Signing
             StoreName = storeName;
             StoreLocation = storeLocation;
             AddCertificateToStore();
-            ExportCrl();
         }
 
         private void AddCertificateToStore()
@@ -47,26 +46,6 @@ namespace Test.Utility.Signing
             _store = new X509Store(StoreName, StoreLocation);
             _store.Open(OpenFlags.ReadWrite);
             _store.Add(TrustedCert);
-        }
-
-        private void ExportCrl()
-        {
-            var testCertificate = Source as TestCertificate;
-
-            if (testCertificate != null && testCertificate.Crl != null)
-            {
-                testCertificate.Crl.ExportCrl();
-            }
-        }
-
-        private void DisposeCrl()
-        {
-            var testCertificate = Source as TestCertificate;
-
-            if (testCertificate != null && testCertificate.Crl != null)
-            {
-                testCertificate.Crl.Dispose();
-            }
         }
 
         public void Dispose()
@@ -78,8 +57,6 @@ namespace Test.Utility.Signing
                 _store.Close();
 #endif
             }
-
-            DisposeCrl();
         }
     }
 }
