@@ -417,7 +417,7 @@ namespace NuGet.Commands
                 targetLibrary.ContentFiles.Count > 0 ||                               // Shared content
                 targetLibrary.ResourceAssemblies.Count > 0 ||                         // Resources (satellite package)
                 targetLibrary.Build.Count > 0 ||                                      // Build
-                targetLibrary.BuildMultiTargeting.Count > 0 ||                        // Cross targeting build
+                targetLibrary.BuildMultiTargeting.Count > 0;                          // Cross targeting build
         }
 
         internal static bool HasCompatibleToolsAssets(LockFileTargetLibrary targetLibrary)
