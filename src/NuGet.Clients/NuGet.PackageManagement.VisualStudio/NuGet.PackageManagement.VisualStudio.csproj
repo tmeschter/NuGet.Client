@@ -19,6 +19,13 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+  <ItemGroup Condition=" '$(SkipAssemblyAttributes)' != 'true'">
+    <AssemblyAttributes Include="Microsoft.VisualStudio.Shell.ProvideCodeBase">
+      <AssemblyName>$(AssemblyName)</AssemblyName>
+      <Version>$(SemanticVersion).$(PreReleaseVersion)</Version>
+      <CodeBase>$PackageFolder$\\$(AssemblyName).dll</CodeBase>
+    </AssemblyAttributes>
+  </ItemGroup>
   <ItemGroup Condition="'$(VisualStudioVersion)' == '14.0'">
     <Reference Include="Microsoft.VisualStudio.VCProjectEngine, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <EmbedInteropTypes>True</EmbedInteropTypes>
