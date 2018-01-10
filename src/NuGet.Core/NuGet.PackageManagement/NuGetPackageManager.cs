@@ -2662,10 +2662,13 @@ namespace NuGet.PackageManagement
                 {
                     if (originalAction.NuGetProjectActionType == NuGetProjectActionType.Install)
                     {
-                        var resolvedAction = projectAction.RestoreResult.LockFile.PackageSpec.TargetFrameworks.FirstOrDefault().Dependencies.First(
-                            dependency => dependency.Name.Equals(originalAction.PackageIdentity.Id, StringComparison.OrdinalIgnoreCase));
+                        if (buildIntegratedProject.ProjectStyle == ProjectStyle.PackageReference)
+                        {
+                            var resolvedAction = projectAction.RestoreResult.LockFile.PackageSpec.TargetFrameworks.FirstOrDefault().Dependencies.First(
+                                dependency => dependency.Name.Equals(originalAction.PackageIdentity.Id, StringComparison.OrdinalIgnoreCase));
 
-                        projectAction.InstallationContext.SuppressParent = resolvedAction.SuppressParent;
+                            projectAction.InstallationContext.SuppressParent = resolvedAction.SuppressParent;
+                        }
 
                         // Install the package to the project
                         await buildIntegratedProject.InstallPackageAsync(

@@ -169,7 +169,7 @@ namespace NuGet.DependencyResolver.Core.Tests
                 ILogger logger,
                 CancellationToken cancellationToken)
             {
-                throw new NotImplementedException();
+                return Task.FromResult(false);
             }
         }
     }

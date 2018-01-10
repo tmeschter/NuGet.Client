@@ -838,7 +838,7 @@ namespace NuGet.DependencyResolver.Tests
                 ILogger logger,
                 CancellationToken cancellationToken)
             {
-                throw new NotImplementedException();
+                return Task.FromResult(false);
             }
 
             public Task<IPackageDownloader> GetPackageDownloaderAsync(
