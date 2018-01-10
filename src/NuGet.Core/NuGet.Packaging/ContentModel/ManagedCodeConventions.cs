@@ -512,11 +512,11 @@ namespace NuGet.Client
                     conventions.Properties,
                     groupPatterns: new PatternDefinition[]
                         {
-                            new PatternDefinition("tools/{tfm}/{rid}/{any?}", table: null, defaults: DefaultTfmAny),
+                            new PatternDefinition("tools/{tfm}/{rid}/{any?}", table: DotnetAnyTable),
                         },
                     pathPatterns: new PatternDefinition[]
                         {
-                            new PatternDefinition("tools/{tfm}/{rid}/{any}", table: null, defaults: DefaultTfmAny),
+                            new PatternDefinition("tools/{tfm}/{rid}/{any}", table: DotnetAnyTable),
                     });
             }
         }
